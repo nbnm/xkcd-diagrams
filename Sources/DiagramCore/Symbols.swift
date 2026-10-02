@@ -1,6 +1,28 @@
 import Foundation
 import CoreGraphics
 
+/// Shared content space keeps database labels and logos below the curved lid.
+enum DatabaseContent {
+    static let topInset: CGFloat = 40
+    static let bottomInset: CGFloat = 20
+    static let horizontalInset: CGFloat = 20
+    static let logoHeight: CGFloat = 34
+    static let logoGap: CGFloat = 12
+    static let minimumLogoWidth: CGFloat = 150
+
+    static func verticalPadding(hasLogo: Bool) -> CGFloat {
+        topInset + bottomInset + (hasLogo ? logoHeight + logoGap : 0)
+    }
+    static func labelRect(in frame: CGRect, hasLogo: Bool) -> CGRect {
+        let logoSpace = hasLogo ? logoHeight + logoGap : 0
+        return CGRect(x: frame.minX + horizontalInset, y: frame.minY + topInset + logoSpace,
+                      width: frame.width - horizontalInset * 2, height: frame.height - verticalPadding(hasLogo: hasLogo))
+    }
+    static func logoRect(in frame: CGRect) -> CGRect {
+        CGRect(x: frame.midX - 50, y: frame.minY + topInset, width: 100, height: logoHeight)
+    }
+}
+
 /// The library previews and diagram renderer use the same shape geometry.
 public enum SymbolGeometry {
     public static func isFilledDetail(_ shape: Shape, index: Int) -> Bool {

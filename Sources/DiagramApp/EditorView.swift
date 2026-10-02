@@ -41,11 +41,18 @@ struct EditorView: View {
                 }
             }
             ToolbarItemGroup {
-                Picker("Diagram style", selection: Binding(get: { store.document.theme.preset }, set: { value in store.mutate("Change diagram style") { $0.theme.preset = value } })) {
-                    Text("Sketch").tag(ThemePreset.sketch); Text("Standard").tag(ThemePreset.standard); Text("Blueprint").tag(ThemePreset.blueprint); Text("Dark").tag(ThemePreset.dark)
-                }.pickerStyle(.segmented).frame(width: 300)
-                    .accessibilityLabel("Diagram style")
-                    .help("Change the diagram and image exports; app appearance is controlled separately")
+                Picker("Color theme", selection: Binding(get: { store.document.theme.preset }, set: { value in store.mutate("Change color theme") { $0.theme.preset = value } })) {
+                    Text("Standard").tag(ThemePreset.standard); Text("Blueprint").tag(ThemePreset.blueprint); Text("Dark").tag(ThemePreset.dark)
+                }.pickerStyle(.segmented).frame(width: 240)
+                    .accessibilityLabel("Color theme")
+                    .help("Choose diagram colors for the canvas and exports; app appearance is controlled separately")
+                HStack(spacing: 6) {
+                    Text("Sketch").font(.system(size: 12))
+                    Toggle("Sketch", isOn: Binding(get: { store.document.theme.sketch }, set: { value in store.mutate("Toggle sketch") { $0.theme.sketch = value } }))
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                        .accessibilityLabel("Sketch")
+                        .help("Use sketch strokes and the default handwriting font with any color theme; custom fonts are preserved")
+                }.fixedSize()
                 Menu {
                     Button("Add Container", action: { store.addContainer() })
                     Button("Add Container Below Diagram", action: store.addContainerBelow)
@@ -182,6 +189,9 @@ struct Inspector: View {
                         TextField("Title", text: Binding(get: { store.document.title }, set: { v in store.mutate("Edit title") { $0.title = v } })).textFieldStyle(.roundedBorder)
                     }
                 }
+                if let id = textSelection {
+                    section("Selected text") { fontSizeControl(id) }
+                }
                 Divider()
                 section("Canvas placement") {
                     Picker("Top-level items", selection: Binding(get: { store.document.containers[store.document.root]?.layout.mode ?? .free }, set: store.setCanvasLayout)) {
@@ -208,10 +218,16 @@ struct Inspector: View {
                         Text("Menlo").tag("Menlo-Regular")
                     }
                     if store.document.theme.fontFamily != nil {
-                        Text("Custom fonts apply to every style. Choose Style default for each style’s own font.")
+                        Text("Custom fonts apply to every color and stroke style. Choose Style default to follow the Sketch and color settings.")
                             .font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(3)
                     }
-                    Stepper("Text size  \(Int(store.document.theme.fontSize))", value: Binding(get: { store.document.theme.fontSize }, set: { v in store.mutate("Change text size") { $0.theme.fontSize = v } }), in: 10...36)
+                    if textSelection == nil {
+                        Stepper("Default text size  \(Int(store.document.theme.fontSize))", value: Binding(get: { store.document.theme.fontSize }, set: { v in
+                            guard textSelection == nil else { return }
+                            store.mutate("Change default text size") { $0.theme.fontSize = v }
+                        }), in: 10...36)
+                            .help("Set the default text size for system labels")
+                    }
                     Toggle("T1A watermark", isOn: Binding(get: { store.document.watermark }, set: { v in store.mutate("Change watermark") { $0.watermark = v } }))
                         .toggleStyle(.checkbox)
                         .help("Add the T1A logo to the bottom-right corner of the diagram and image exports")
@@ -225,6 +241,25 @@ struct Inspector: View {
     }
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) { Text(title).font(.system(size: 12, weight: .semibold)); content() }
+    }
+    private var textSelection: String? {
+        guard let id = store.selection, id != store.document.root,
+              store.document.nodes[id] != nil || store.document.containers[id] != nil || store.document.connectors[id] != nil else { return nil }
+        return id
+    }
+    private func fontSizeControl(_ id: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Stepper("Text size  \(String(format: "%g", store.document.fontSize(for: id)))", value: Binding(get: { store.document.fontSize(for: id) }, set: { value in
+                guard textSelection == id else { return }
+                store.mutate("Change item text size", coalescingKey: "font-size-\(id)") { try DiagramEditing.setFontSize(value, element: id, document: &$0) }
+            }), in: 10...36)
+                .accessibilityLabel("Selected text size")
+                .help("Change only this selected item's label size")
+            Button("Use default text size") {
+                guard textSelection == id else { return }
+                store.mutate("Reset item text size", coalescingKey: "reset-font-size-\(id)") { try DiagramEditing.setFontSize(nil, element: id, document: &$0) }
+            }.buttonStyle(.borderless).font(.system(size: 11)).disabled(store.document.fontSizeOverride(for: id) == nil)
+        }.id(id)
     }
     private func lineWidthControl(_ id: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {

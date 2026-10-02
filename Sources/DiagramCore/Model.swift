@@ -23,7 +23,7 @@ public enum Shape: String, Codable, CaseIterable {
         }
     }
 }
-public enum ThemePreset: String, Codable, CaseIterable { case sketch = "signature-sketch", standard, blueprint, dark }
+public enum ThemePreset: String, Codable, CaseIterable { case standard, blueprint, dark }
 public enum AssetRendering: String, Codable { case solid, outline }
 public enum Side: String, Codable, CaseIterable { case auto, left, right, top, bottom }
 public enum Direction: String, Codable, CaseIterable { case none, forward, both }
@@ -38,20 +38,27 @@ public struct Point: Codable, Equatable {
 
 public struct Theme: Codable, Equatable {
     public var preset: ThemePreset
+    public var sketch: Bool
     public var version: Int
     public var seed: UInt64
     public var strokeWidth: Double
     public var fontFamily: String?
     public var fontSize: Double
-    public init(preset: ThemePreset = .sketch, version: Int = 1, seed: UInt64 = 42,
+    public init(preset: ThemePreset = .standard, sketch: Bool = true, version: Int = 1, seed: UInt64 = 42,
                 strokeWidth: Double = 1.6, fontFamily: String? = nil, fontSize: Double = 16) {
-        self.preset = preset; self.version = version; self.seed = seed
+        self.preset = preset; self.sketch = sketch; self.version = version; self.seed = seed
         self.strokeWidth = strokeWidth; self.fontFamily = fontFamily; self.fontSize = fontSize
     }
-    enum CodingKeys: String, CodingKey { case preset, version, seed, strokeWidth, fontFamily, fontSize }
+    enum CodingKeys: String, CodingKey { case preset, sketch, version, seed, strokeWidth, fontFamily, fontSize }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        preset = try c.decodeIfPresent(ThemePreset.self, forKey: .preset) ?? .sketch
+        // Older files encoded sketch as a fourth preset. Preserve their appearance,
+        // including the original sketch default when the preset was omitted.
+        let savedPreset = try c.decodeIfPresent(String.self, forKey: .preset) ?? "signature-sketch"
+        if savedPreset == "signature-sketch" { preset = .standard }
+        else if let color = ThemePreset(rawValue: savedPreset) { preset = color }
+        else { throw DecodingError.dataCorruptedError(forKey: .preset, in: c, debugDescription: "Unknown color theme '\(savedPreset)'.") }
+        sketch = try c.decodeIfPresent(Bool.self, forKey: .sketch) ?? (savedPreset == "signature-sketch")
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
         seed = try c.decodeIfPresent(UInt64.self, forKey: .seed) ?? 42
         strokeWidth = try c.decodeIfPresent(Double.self, forKey: .strokeWidth) ?? 1.6
@@ -70,14 +77,15 @@ public struct Node: Codable, Equatable {
     public var asset: String?
     public var variant: LogoVariant?
     public var strokeWidth: Double?
+    public var fontSize: Double?
     public init(type: String = "service", label: String = "Service", shape: Shape = .rectangle,
                 position: Point? = nil, width: Double? = nil, height: Double? = nil,
-                asset: String? = nil, variant: LogoVariant? = nil, strokeWidth: Double? = nil) {
+                asset: String? = nil, variant: LogoVariant? = nil, strokeWidth: Double? = nil, fontSize: Double? = nil) {
         self.type = type; self.label = label; self.shape = shape; self.position = position
         self.width = width; self.height = height; self.asset = asset; self.variant = variant
-        self.strokeWidth = strokeWidth
+        self.strokeWidth = strokeWidth; self.fontSize = fontSize
     }
-    enum CodingKeys: String, CodingKey { case type, label, shape, position, width, height, asset, variant, strokeWidth }
+    enum CodingKeys: String, CodingKey { case type, label, shape, position, width, height, asset, variant, strokeWidth, fontSize }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         type = try c.decode(String.self, forKey: .type)
@@ -89,6 +97,7 @@ public struct Node: Codable, Equatable {
         asset = try c.decodeIfPresent(String.self, forKey: .asset)
         variant = try c.decodeIfPresent(LogoVariant.self, forKey: .variant)
         strokeWidth = try c.decodeIfPresent(Double.self, forKey: .strokeWidth)
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize)
     }
 }
 
@@ -142,13 +151,14 @@ public struct Container: Codable, Equatable {
     public var width: Double?
     public var height: Double?
     public var strokeWidth: Double?
+    public var fontSize: Double?
     public init(label: String? = nil, layout: ContainerLayout = .init(), children: [String] = [],
                 allowedChildTypes: [String]? = nil, position: Point? = nil, width: Double? = nil,
-                height: Double? = nil, strokeWidth: Double? = nil) {
+                height: Double? = nil, strokeWidth: Double? = nil, fontSize: Double? = nil) {
         self.label = label; self.layout = layout; self.children = children
         self.allowedChildTypes = allowedChildTypes; self.position = position
         self.width = width; self.height = height
-        self.strokeWidth = strokeWidth
+        self.strokeWidth = strokeWidth; self.fontSize = fontSize
     }
 }
 
@@ -173,13 +183,14 @@ public struct Connector: Codable, Equatable {
     public var dashed: Bool
     public var waypoints: [Point]?
     public var strokeWidth: Double?
+    public var fontSize: Double?
     public init(from: Endpoint, to: Endpoint, label: String? = nil, direction: Direction = .forward,
-                routing: Routing = .orthogonal, dashed: Bool = false, waypoints: [Point]? = nil, strokeWidth: Double? = nil) {
+                routing: Routing = .orthogonal, dashed: Bool = false, waypoints: [Point]? = nil, strokeWidth: Double? = nil, fontSize: Double? = nil) {
         self.from = from; self.to = to; self.label = label; self.direction = direction
         self.routing = routing; self.dashed = dashed; self.waypoints = waypoints
-        self.strokeWidth = strokeWidth
+        self.strokeWidth = strokeWidth; self.fontSize = fontSize
     }
-    enum CodingKeys: String, CodingKey { case from, to, label, direction, routing, dashed, waypoints, strokeWidth }
+    enum CodingKeys: String, CodingKey { case from, to, label, direction, routing, dashed, waypoints, strokeWidth, fontSize }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         from = try c.decode(Endpoint.self, forKey: .from); to = try c.decode(Endpoint.self, forKey: .to)
@@ -189,6 +200,7 @@ public struct Connector: Codable, Equatable {
         dashed = try c.decodeIfPresent(Bool.self, forKey: .dashed) ?? false
         waypoints = try c.decodeIfPresent([Point].self, forKey: .waypoints)
         strokeWidth = try c.decodeIfPresent(Double.self, forKey: .strokeWidth)
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize)
     }
 }
 
@@ -265,6 +277,14 @@ public struct Diagram: Codable, Equatable {
     public func label(of id: String) -> String { nodes[id]?.label ?? containers[id]?.label ?? connectors[id]?.label ?? id }
     public func strokeWidthOverride(for id: String) -> Double? { nodes[id]?.strokeWidth ?? containers[id]?.strokeWidth ?? connectors[id]?.strokeWidth }
     public func strokeWidth(for id: String) -> Double { strokeWidthOverride(for: id) ?? theme.strokeWidth }
+    public func fontSizeOverride(for id: String) -> Double? { nodes[id]?.fontSize ?? containers[id]?.fontSize ?? connectors[id]?.fontSize }
+    public func fontSize(for id: String) -> Double {
+        if let size = fontSizeOverride(for: id) { return size }
+        // Preserve the established hierarchy in files without individual sizes.
+        if connectors[id] != nil { return 12 }
+        if containers[id] != nil && id != root { return 14 }
+        return theme.fontSize
+    }
     public func descendants(of id: String) -> Set<String> {
         var found: Set<String> = [id]
         func visit(_ id: String) { for child in containers[id]?.children ?? [] where found.insert(child).inserted { visit(child) } }

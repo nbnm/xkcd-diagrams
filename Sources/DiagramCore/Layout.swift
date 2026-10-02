@@ -4,7 +4,16 @@ import CoreText
 
 public enum Typography {
     public static func font(_ theme: Theme, size: CGFloat? = nil) -> CTFont {
-        CTFontCreateWithName((theme.fontFamily ?? (theme.preset == .sketch ? "ChalkboardSE-Regular" : theme.preset == .blueprint ? "Menlo-Regular" : "Helvetica")) as CFString, size ?? CGFloat(theme.fontSize), nil)
+        CTFontCreateWithName((theme.fontFamily ?? (theme.sketch ? "ChalkboardSE-Regular" : theme.preset == .blueprint ? "Menlo-Regular" : "Helvetica")) as CFString, size ?? CGFloat(theme.fontSize), nil)
+    }
+    public static func font(_ document: Diagram, for id: String) -> CTFont {
+        font(document.theme, size: CGFloat(document.fontSize(for: id)))
+    }
+    static func containerHeaderHeight(_ container: Container, theme: Theme) -> CGFloat {
+        guard let size = container.fontSize else { return 36 }
+        let font = font(theme, size: CGFloat(size))
+        let lines = (container.label ?? "Container").components(separatedBy: "\n").count
+        return max(36, ceil(CGFloat(lines) * (CTFontGetAscent(font) + CTFontGetDescent(font) + 5)) + 22)
     }
     static func line(_ text: String, font: CTFont) -> CTLine {
         CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [NSAttributedString.Key(kCTFontAttributeName as String): font]))
@@ -87,17 +96,19 @@ public enum LayoutEngine {
             if let existing = sizes[id] { return existing }
             let size: CGSize
             if let n = d.nodes[id] {
+                let font = Typography.font(d, for: id)
                 let wordWidth = n.label.split(whereSeparator: { $0.isWhitespace }).map { Typography.width(String($0), font: font) }.max() ?? 0
                 let labelPadding: CGFloat = n.shape.isDocument ? 44 : 40
-                let width = max(CGFloat(n.width ?? n.shape.defaultWidth), wordWidth + labelPadding)
+                let logoWidth: CGFloat = n.shape == .cylinder && n.asset != nil ? DatabaseContent.minimumLogoWidth : 0
+                let width = max(CGFloat(n.width ?? n.shape.defaultWidth), wordWidth + labelPadding, logoWidth)
                 let lines = Typography.lines(n.label, font: font, maxWidth: width - labelPadding).count
-                let contentPadding: CGFloat = n.shape.isDocument && n.shape != .file ? 120 + (n.asset == nil ? 0 : 43) : n.asset != nil ? (n.shape == .cylinder ? 90 : 70) : n.shape == .actor ? 96 : n.shape == .file ? 48 : 32
+                let contentPadding: CGFloat = n.shape == .cylinder ? DatabaseContent.verticalPadding(hasLogo: n.asset != nil) : n.shape.isDocument && n.shape != .file ? 120 + (n.asset == nil ? 0 : 43) : n.asset != nil ? 70 : n.shape == .actor ? 96 : n.shape == .file ? 48 : 32
                 let height = CGFloat(lines) * (CTFontGetAscent(font) + CTFontGetDescent(font) + 5) + contentPadding
                 size = CGSize(width: width, height: max(CGFloat(n.height ?? n.shape.defaultHeight), height))
             } else {
                 let c = d.containers[id]!, padding = CGFloat(c.layout.padding), gap = CGFloat(c.layout.gap)
                 let childSizes = c.children.map(measure)
-                let header: CGFloat = id == d.root ? 0 : 36
+                let header: CGFloat = id == d.root ? 0 : Typography.containerHeaderHeight(c, theme: d.theme)
                 var content = CGSize.zero
                 switch c.layout.mode {
                 case .grid:
@@ -117,8 +128,11 @@ public enum LayoutEngine {
                     }
                     content = rect.size; shifts[id] = CGPoint(x: -rect.minX, y: -rect.minY)
                 }
-                let titleWidth = Typography.width(c.label ?? "", font: font)
-                size = CGSize(width: max(CGFloat(c.width ?? 0), id == d.root ? 0 : 210, content.width + padding * 2, titleWidth + padding * 2), height: max(CGFloat(c.height ?? 0), id == d.root ? 0 : 130, content.height + padding * 2 + header))
+                let titleFont = c.fontSize == nil ? font : Typography.font(d, for: id)
+                let titleWidth = c.fontSize == nil ? Typography.width(c.label ?? "", font: titleFont) :
+                    (c.label ?? "Container").components(separatedBy: "\n").map { Typography.width($0, font: titleFont) }.max() ?? 0
+                let titlePadding = c.fontSize == nil ? padding * 2 : max(40, padding * 2)
+                size = CGSize(width: max(CGFloat(c.width ?? 0), id == d.root ? 0 : 210, content.width + padding * 2, titleWidth + titlePadding), height: max(CGFloat(c.height ?? 0), id == d.root ? 0 : 130, content.height + padding * 2 + header))
             }
             sizes[id] = size; return size
         }
@@ -129,7 +143,7 @@ public enum LayoutEngine {
             frames[id] = CGRect(origin: origin, size: size); order.append(id)
             guard let c = d.containers[id] else { return }
             let pad = CGFloat(c.layout.padding), gap = CGFloat(c.layout.gap)
-            let header: CGFloat = id == d.root ? 0 : 36
+            let header: CGFloat = id == d.root ? 0 : Typography.containerHeaderHeight(c, theme: d.theme)
             if var grid = grids[id] {
                 let extraWidth = max(0, size.width - pad * 2 - grid.size.width) / CGFloat(grid.columnWidths.count)
                 let extraHeight = max(0, size.height - pad * 2 - header - grid.size.height) / CGFloat(grid.rowHeights.count)
@@ -177,7 +191,10 @@ public enum LayoutEngine {
                 let pairs = Array(zip(points, points.dropFirst())).sorted {
                     hypot($0.1.x - $0.0.x, $0.1.y - $0.0.y) > hypot($1.1.x - $1.0.x, $1.1.y - $1.0.y)
                 }
-                let width = Typography.width(label, font: Typography.font(d.theme, size: 12)) + 16
+                let labelFont = Typography.font(d, for: id)
+                let lines = label.components(separatedBy: "\n")
+                let width = (edge.fontSize == nil ? Typography.width(label, font: labelFont) : lines.map { Typography.width($0, font: labelFont) }.max() ?? 0) + 16
+                let height: CGFloat = edge.fontSize == nil ? 22 : max(22, ceil(CGFloat(lines.count) * (CTFontGetAscent(labelFont) + CTFontGetDescent(labelFont) + 5)) + 4)
                 var candidates: [CGRect] = []
                 for step in 0..<12 {
                     let offset = CGFloat(10 + step * 24)
@@ -185,17 +202,17 @@ public enum LayoutEngine {
                         let midpoint = CGPoint(x: (segment.0.x + segment.1.x) / 2, y: (segment.0.y + segment.1.y) / 2)
                         let horizontal = abs(segment.0.x - segment.1.x) >= abs(segment.0.y - segment.1.y)
                         if horizontal {
-                            candidates.append(CGRect(x: midpoint.x - width / 2, y: midpoint.y - 22 - offset, width: width, height: 22))
-                            candidates.append(CGRect(x: midpoint.x - width / 2, y: midpoint.y + offset, width: width, height: 22))
+                            candidates.append(CGRect(x: midpoint.x - width / 2, y: midpoint.y - height - offset, width: width, height: height))
+                            candidates.append(CGRect(x: midpoint.x - width / 2, y: midpoint.y + offset, width: width, height: height))
                         } else {
-                            candidates.append(CGRect(x: midpoint.x + offset, y: midpoint.y - 11, width: width, height: 22))
-                            candidates.append(CGRect(x: midpoint.x - width - offset, y: midpoint.y - 11, width: width, height: 22))
+                            candidates.append(CGRect(x: midpoint.x + offset, y: midpoint.y - height / 2, width: width, height: height))
+                            candidates.append(CGRect(x: midpoint.x - width - offset, y: midpoint.y - height / 2, width: width, height: height))
                         }
                     }
                 }
                 let obstacles = d.nodes.keys.compactMap { frames[$0] } + d.containers.keys.filter { $0 != d.root }.compactMap { key -> CGRect? in
                     guard let rect = frames[key] else { return nil }
-                    return CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 42)
+                    return CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: max(42, Typography.containerHeaderHeight(d.containers[key]!, theme: d.theme) + 6))
                 } + Array(labelFrames.values)
                 let r = candidates.first { candidate in !obstacles.contains { $0.intersects(candidate.insetBy(dx: -2, dy: -2)) } } ?? candidates[0]
                 labelFrames[id] = r; bounds = bounds.union(r)

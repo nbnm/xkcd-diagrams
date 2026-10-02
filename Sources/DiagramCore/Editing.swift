@@ -96,6 +96,18 @@ public enum DiagramEditing {
         document = next
     }
 
+    public static func setFontSize(_ size: Double?, element id: String, document: inout Diagram) throws {
+        guard id != document.root, document.nodes[id] != nil || document.containers[id] != nil || document.connectors[id] != nil else {
+            throw DiagramError.message("Select an existing object or connector.")
+        }
+        if let size, !size.isFinite || !(10...36).contains(size) {
+            throw DiagramError.message("Text size must be between 10 and 36.")
+        }
+        if document.nodes[id] != nil { document.nodes[id]?.fontSize = size }
+        else if document.containers[id] != nil { document.containers[id]?.fontSize = size }
+        else { document.connectors[id]?.fontSize = size }
+    }
+
     public static func setStrokeWidth(_ width: Double?, element id: String, document: inout Diagram) throws {
         guard id != document.root, document.nodes[id] != nil || document.containers[id] != nil || document.connectors[id] != nil else {
             throw DiagramError.message("Select an existing object or connector.")

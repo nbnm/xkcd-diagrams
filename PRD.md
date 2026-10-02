@@ -18,7 +18,7 @@ This PRD defines the proposed first release, its document model, visual behavior
 | Purpose | Minimal enterprise IT system diagrams, tuned to personal definitions | Architecture, integration, deployment, and data flow diagrams |
 | Creation | Drag and drop and agent skill; agents use files and a CLI | Visual editor plus file access, CLI, schema, and project skill |
 | Structure | Boxes and containers that define contents and arrangement | Nested containers with horizontal, vertical, or free placement and optional allowed types |
-| Visual identity | Sketch style close to xkcd, standard theme, Blueprint, and Dark | Signature Sketch, Standard, Blueprint, and Dark presets using the same diagram structure |
+| Visual identity | Sketch toggle independent of three color themes | Standard, Blueprint, and Dark colors, each with clean or signature sketch strokes |
 | Styling | Primarily black or gray; adjustable fonts and line widths | Monochrome defaults, restrained controls, white or transparent export background |
 | Assets | Vendor groups containing Databricks product logos, OpenAI, Anthropic, Azure, and AWS; black and white representations | Searchable expandable groups with monochrome variants, simple generic shapes, and custom SVG or PNG import |
 | Representation | One teachable JSON-like format; Mermaid is a possibility | Strict JSON, published JSON Schema, stable IDs, and explicit layout intent |
@@ -37,7 +37,7 @@ The first release must achieve these outcomes:
 1. Create a useful architecture diagram from a small familiar library in minutes.
 2. Express nested system boundaries and repeatable arrangement rules directly in the document.
 3. Generate a valid diagram with an agent, refine it manually, and export it without conversion loss.
-4. Switch between sketch, standard, and blueprint presentations without rebuilding the diagram.
+4. Switch between Standard, Blueprint, and Dark colors and independently toggle Sketch without rebuilding the diagram.
 5. Make the signature style consistent across files, authors, and exports.
 
 ## Users and primary workflows
@@ -67,7 +67,7 @@ Switch an existing diagram from Signature Sketch to Standard. Systems, containme
 | macOS visual editor and local files | Live MCP interface | Real time collaboration |
 | Nodes, nested containers, connectors, text | Whole diagram automatic graph layout | Cloud account or required hosted service |
 | Horizontal, vertical, free, and custom grid placement | Swimlane layouts | General illustration or photo editing |
-| Signature Sketch, Standard, Blueprint, and Dark themes | Mermaid import and export | Built in chat or model hosting |
+| Three color themes with an independent Sketch toggle | Mermaid import and export | Built in chat or model hosting |
 | Local logo and symbol library | PDF export | Full UML or BPMN conformance |
 | Reusable presets and content rules | Collapsible containers | Windows, Linux, web, or iPad editor |
 | PNG, SVG, and JSON export | Shared library management UI | Animated diagrams |
@@ -115,7 +115,8 @@ The following is a proposal demonstrating the desired authoring experience, not 
   "id": "order-platform",
   "title": "Order platform",
   "theme": {
-    "preset": "signature-sketch",
+    "preset": "standard",
+    "sketch": true,
     "version": 1,
     "seed": 42,
     "strokeWidth": 1.6
@@ -198,21 +199,25 @@ First release automatic layout concerns ordered containers. Free root placement 
 
 Provide a small initial shape set: rectangle, rounded rectangle, cylinder, message queue, a Documents group with File, XLSX, PDF, and DOCX folded sheets, person or actor symbol, and text annotation. Semantic types such as service, application, API, database, queue, and external system are independent of their shape and logo.
 
-Connectors support plain lines, forward arrows, arrows at both ends, and solid or dashed patterns. All routes must meet their attachment edges at 90 degrees and use right-angle bends. Explicit endpoint sides, automatic sides, and manual waypoints must preserve this rule; waypoint coordinates stay stored as authored while the renderer adds the necessary bends. The legacy `straight` field remains readable for compatibility but renders with right-angle geometry. Arrowheads and labels must remain legible in all four themes.
+Connectors support plain lines, forward arrows, arrows at both ends, and solid or dashed patterns. All routes must meet their attachment edges at 90 degrees and use right-angle bends. Explicit endpoint sides, automatic sides, and manual waypoints must preserve this rule; waypoint coordinates stay stored as authored while the renderer adds the necessary bends. The legacy `straight` field remains readable for compatibility but renders with right-angle geometry. Arrowheads and labels must remain legible in all six color/stroke combinations.
 
 Endpoints attach to nodes or container boundaries, with automatic or explicitly chosen sides. Moving an endpoint element updates the attachment. Routing should avoid unrelated nodes and labels, permit intentional boundary crossings, and expose manual waypoints when automatic routing is unsatisfactory. Preserve those waypoints in subsequent edits; warn if they create an unresolved collision.
 
 When an element with attached connectors is deleted, show which connectors will also be removed and perform the change as one undoable action. Duplicating a container regenerates descendant IDs and remaps internal connectors; external connections are not copied by default.
 
-Labels support multiline text, automatic wrapping, and an optional secondary description. Font family, size, and weight are configurable. Default text is black or dark gray; relationship meaning must remain understandable without color.
+Labels support multiline text, automatic wrapping, and an optional secondary description. Font family, size, and weight are configurable. Changing Text size with a shape, container, or connector selected affects only its label or title. Store a per-element `fontSize` override (10–36 points); container overrides do not propagate to children. Provide Use default text size to clear the override. With no selection, Default text size controls the document default for system labels. Preserve established title and connector defaults of 14 and 12 points in older files. Layout and image exports must use the same resolved sizes, expanding shapes, container headers, and connector label backgrounds as needed without clipping text. Default text is black or dark gray; relationship meaning must remain understandable without color.
 
 ## Signature visual style
+
+### Independent color and stroke controls
+
+Provide three color themes: Standard, Blueprint, and Dark. A separate Sketch toggle controls pen variation and the default handwriting font for all three themes. App appearance remains a separate local Light/Dark preference. Save color in `theme.preset` and the boolean in `theme.sketch`. New diagrams use Standard with Sketch on. Preserve existing appearance when reading older files: `signature-sketch` becomes Standard with Sketch on; older Standard, Blueprint, and Dark become Sketch off. Preserve custom fonts, line widths, seeds, element ordering, positions, and connector constraints when changing either setting.
 
 ### Signature Sketch
 
 The intended character is a deliberate technical sketch: white space, restrained imperfections, simple boundaries, and readable handwritten typography. The xkcd reference expresses an aesthetic direction; the product's own preset needs concrete visual rules.
 
-- Use black and gray strokes with white or transparent backgrounds.
+- Use black and gray strokes on Standard paper, white ink on Blueprint, and light gray ink on Dark; transparent export is optional.
 - Keep geometry and spacing orderly; apply slight variation to strokes rather than randomizing the underlying layout.
 - Limit wobble, overshoot, and repeated strokes so small symbols and arrowheads remain recognizable.
 - Prefer outline containers and generous padding. Hatching is optional and off by default.
@@ -220,13 +225,13 @@ The intended character is a deliberate technical sketch: white space, restrained
 - Avoid default gradients, shadows, ornamental effects, and arbitrary accent colors.
 - Keep logos recognizable. Use monochrome assets where available, and retain their geometry rather than distorting the mark.
 
-Sketch and Standard must remain visibly different at typical canvas zoom even when the same custom font is selected. Apply restrained pen variation to straight and curved symbol outlines, container boundaries, document detail lines, and connectors. Preserve shape vertices and side-center attachment tangents. Connector strokes must retain straight sections at bends and endpoints, preserving 90-degree bends and perpendicular attachments. Keep routing and manual waypoints unchanged, and logo geometry undistorted. A custom font applies to every style; provide Style default to restore each style’s own typeface.
+Sketch on and off must remain visibly different in each color theme at typical canvas zoom even when the same custom font is selected. Apply restrained pen variation to straight and curved symbol outlines, container boundaries, document detail lines, and connectors. Preserve shape vertices and side-center attachment tangents. Connector strokes must retain straight sections at bends and endpoints, preserving 90-degree bends and perpendicular attachments. Keep routing and manual waypoints unchanged, and logo geometry undistorted. A custom font applies to every combination; provide Style default to follow the Sketch and color settings.
 
 Store a document seed and derive stable variation from each element ID and its geometry. Reopening or exporting an unchanged diagram must not produce a new sketch. Changing one node must not rerandomize unrelated elements. Manual hit testing uses clean geometry so imperfect strokes do not make selection difficult.
 
-### Standard
+### Standard colors and clean strokes
 
-Use clean outlines, precise corners and curves, a conventional font, and the same restrained monochrome hierarchy. All themes share containment, ordering, endpoint attachment, and explicit layout constraints. Theme differences may change text dimensions, but should preserve authors' arrangement choices.
+Standard uses white paper and black or gray ink. With Sketch off, use clean outlines, precise corners and curves, and a conventional font. With Sketch on, retain these colors and apply the signature strokes and handwriting font. All themes share containment, ordering, endpoint attachment, and explicit layout constraints. Theme differences may change text dimensions, but should preserve authors' arrangement choices.
 
 ### Personal conventions
 
@@ -236,13 +241,13 @@ Preset use creates an editable snapshot in the document. Later profile changes a
 
 ### Blueprint
 
-Use saturated blue paper (`#0b3d91`) with white boundaries, connectors, labels, and marks. Add a very thin drafting grid with 20-point squares and slightly stronger lines every 100 points, keeping the grid quieter than diagram strokes. Align it to document coordinates so it remains stable while panning and matches PNG and SVG exports. A monospaced font is the default; font family and size remain configurable. Line width changes in the editor apply to the selected node, container boundary, or connector only, including a connector’s arrowheads. Each element can store its own width; omitted widths use the document default. Container stroke widths do not propagate to children. With no selection, hide the width control; provide a reset to the default for an explicit override. Vendor marks render directly in white on blue. Avoid adding decoration that competes with the architecture.
+Use saturated blue paper (`#0b3d91`) with white boundaries, connectors, labels, and marks. Add a very thin drafting grid with 20-point squares and slightly stronger lines every 100 points, keeping the grid quieter than diagram strokes. Align it to document coordinates so it remains stable while panning and matches PNG and SVG exports. With Sketch off, a monospaced font is the default; Sketch on uses readable handwriting; font family and size remain configurable. Line width changes in the editor apply to the selected node, container boundary, or connector only, including a connector’s arrowheads. Each element can store its own width; omitted widths use the document default. Container stroke widths do not propagate to children. With no selection, hide the width control; provide a reset to the default for an explicit override. Vendor marks render directly in white on blue. Avoid adding decoration that competes with the architecture.
 
-The signature style is accepted through a reference set: one simple integration, one nested deployment, and one denser data flow. Review all four themes at normal presentation size and after image export. The user must judge that the sketch treatment feels recognizable and intentional; a numerical roughness setting alone does not establish success.
+The signature style is accepted through a reference set: one simple integration, one nested deployment, and one denser data flow. Review all six color/stroke combinations at normal presentation size and after image export. The user must judge that the sketch treatment feels recognizable and intentional; a numerical roughness setting alone does not establish success.
 
 ### Dark theme
 
-Use charcoal paper (`#181818`) with light gray lines, labels, and logos. Keep the same diagram model, container layouts, connectors, and export behavior. Use Helvetica by default unless the document specifies a font. App appearance is an independent Light/Dark preference. Every diagram style must work with either interface appearance. Preserve logo variant preferences when switching to other themes.
+Use charcoal paper (`#181818`) with light gray lines, labels, and logos. Keep the same diagram model, container layouts, connectors, and export behavior. Use Helvetica with Sketch off and readable handwriting with Sketch on, unless the document specifies a font. App appearance is an independent Light/Dark preference. Every diagram style must work with either interface appearance. Preserve logo variant preferences when switching to other themes.
 
 ## Asset library and presets
 
@@ -271,7 +276,7 @@ Missing or invalid assets produce a named placeholder and diagnostic. An explici
 
 ## macOS editor requirements
 
-Use a focused workspace: asset and preset library on the left, diagram canvas in the center, and a contextual inspector on the right. The inspector exposes only properties relevant to the selection. Keep diagram style, save, and export actions readily accessible. Provide a separate App appearance control with Light and Dark options at the bottom of the library. Remember this preference across launches and document changes; changing it must not affect diagram JSON, exports, dirty state, or undo history.
+Use a focused workspace: asset and preset library on the left, diagram canvas in the center, and a contextual inspector on the right. The inspector exposes only properties relevant to the selection. Keep Color theme, the separate Sketch toggle, save, and export actions readily accessible. Each appearance change supports its own undo and redo. Provide a separate App appearance control with Light and Dark options at the bottom of the library. Remember this preference across launches and document changes; changing it must not affect diagram JSON, exports, dirty state, or undo history.
 
 Required interactions include drag and drop, selection and multiselection, pan and zoom, fit to content, snapping guides, resize, duplicate, delete, keyboard nudging, and connector creation. Provide standard macOS undo and redo, copy and paste, Open, Save, Save As, and Export. Support trackpad navigation and keyboard access to common authoring tasks.
 
@@ -358,7 +363,7 @@ The offline workflow includes creating, opening, validating, editing, and export
 ## Delivery sequence
 
 1. **Product and style definition.** Use the confirmed personal audience, file and CLI workflow, and container arrangement scope. Choose the starter product icons and agree on the reference diagrams, theme rules, and T1A vocabulary.
-2. **Format and renderer spike.** Render the same nested example in all four themes from JSON. Demonstrate seeded strokes, a connection crossing a container boundary, portable text and logos, and headless export. Select the implementation stack from these results.
+2. **Format and renderer spike.** Render the same nested example in all six color/stroke combinations from JSON. Demonstrate seeded strokes, a connection crossing a container boundary, portable text and logos, and headless export. Select the implementation stack from these results.
 3. **Complete editing workflow.** Build local file handling, manual composition, containers, connectors, inspection, undo, source validation, and image export.
 4. **Agent workflow.** Ship CLI commands, schema, example documents, and the project skill. Verify a complete agent to app to agent handoff and external edit handling.
 5. **Personal pilot.** Produce real architecture diagrams, measure the proposed targets, and refine the style and library. Broader distribution, MCP, and full graph layout follow only if they serve the pilot's needs.

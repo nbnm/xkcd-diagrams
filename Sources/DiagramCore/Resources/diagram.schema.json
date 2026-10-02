@@ -129,6 +129,10 @@
         "strokeWidth": {
           "$ref": "#/$defs/strokeWidth",
           "description": "Line width for this node only; omitted values use theme.strokeWidth."
+        },
+        "fontSize": {
+          "$ref": "#/$defs/fontSize",
+          "description": "Text size in points for this node only. Omit to use its default size."
         }
       },
       "required": [
@@ -224,6 +228,10 @@
           "minimum": 20,
           "maximum": 100000,
           "description": "Minimum container height in points; grows to fit children and padding. Omit for automatic sizing."
+        },
+        "fontSize": {
+          "$ref": "#/$defs/fontSize",
+          "description": "Text size in points for this container title, without changing its children only. Omit to use its default size."
         }
       },
       "required": [
@@ -292,6 +300,10 @@
         "strokeWidth": {
           "$ref": "#/$defs/strokeWidth",
           "description": "Line width for this connector only; omitted values use theme.strokeWidth."
+        },
+        "fontSize": {
+          "$ref": "#/$defs/fontSize",
+          "description": "Text size in points for this connector label only. Omit to use its default size."
         }
       },
       "required": [
@@ -342,12 +354,17 @@
       "type": "object",
       "properties": {
         "preset": {
+          "description": "Color theme. The legacy signature-sketch value reads as standard with sketch enabled; new files use standard, blueprint, or dark.",
           "enum": [
             "signature-sketch",
             "standard",
             "blueprint",
             "dark"
           ]
+        },
+        "sketch": {
+          "type": "boolean",
+          "description": "Sketch strokes and default handwriting font, independent of color theme. Write explicitly in new files. When omitted in legacy files, true for signature-sketch or a missing preset, otherwise false."
         },
         "version": {
           "const": 1
@@ -411,6 +428,11 @@
       ],
       "additionalProperties": false,
       "description": "One-based cell coordinates and spans. Assignments must fit the configured grid and cannot overlap."
+    },
+    "fontSize": {
+      "type": "number",
+      "minimum": 10,
+      "maximum": 36
     }
   }
 }

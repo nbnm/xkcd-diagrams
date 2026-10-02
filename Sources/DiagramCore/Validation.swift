@@ -19,16 +19,16 @@ enum StrictDocument {
             }
         }
         keys(root, ["schemaVersion", "id", "title", "theme", "watermark", "root", "nodes", "containers", "connectors", "assets"], "$")
-        if let theme = root["theme"] as? [String: Any] { keys(theme, ["preset", "version", "seed", "strokeWidth", "fontFamily", "fontSize"], "$.theme") }
+        if let theme = root["theme"] as? [String: Any] { keys(theme, ["preset", "sketch", "version", "seed", "strokeWidth", "fontFamily", "fontSize"], "$.theme") }
         for collection in ["nodes", "containers", "connectors", "assets"] {
             guard let entries = root[collection] as? [String: Any] else { continue }
             for id in entries.keys.sorted() {
                 guard let value = entries[id] as? [String: Any] else { continue }
                 let p = "$.\(collection).\(id)"
                 switch collection {
-                case "nodes": keys(value, ["type", "label", "shape", "position", "width", "height", "asset", "variant", "strokeWidth"], p)
+                case "nodes": keys(value, ["type", "label", "shape", "position", "width", "height", "asset", "variant", "strokeWidth", "fontSize"], p)
                 case "containers":
-                    keys(value, ["label", "layout", "children", "allowedChildTypes", "position", "width", "height", "strokeWidth"], p)
+                    keys(value, ["label", "layout", "children", "allowedChildTypes", "position", "width", "height", "strokeWidth", "fontSize"], p)
                     if let layout = value["layout"] as? [String: Any] {
                         keys(layout, ["mode", "gap", "padding", "rows", "columns", "cells"], p + ".layout")
                         if let cells = layout["cells"] as? [String: Any] {
@@ -38,7 +38,7 @@ enum StrictDocument {
                         }
                     }
                 case "connectors":
-                    keys(value, ["from", "to", "label", "direction", "routing", "dashed", "waypoints", "strokeWidth"], p)
+                    keys(value, ["from", "to", "label", "direction", "routing", "dashed", "waypoints", "strokeWidth", "fontSize"], p)
                     for side in ["from", "to"] { if let endpoint = value[side] as? [String: Any] { keys(endpoint, ["element", "side"], p + "." + side) } }
                     if let points = value["waypoints"] as? [[String: Any]] { for (index, point) in points.enumerated() { keys(point, ["x", "y"], p + ".waypoints[\(index)]") } }
                 default: keys(value, ["name", "source", "viewBox", "paths", "rendering"], p)
@@ -57,6 +57,9 @@ public enum Validator {
         func checkStroke(_ value: Double?, path: String, id: String) {
             if let value, !value.isFinite || !(0.5...8).contains(value) { report("numeric-range", path + ".strokeWidth", "Line width must be between 0.5 and 8.", id) }
         }
+        func checkFontSize(_ value: Double?, path: String, id: String) {
+            if let value, !value.isFinite || !(10...36).contains(value) { report("numeric-range", path + ".fontSize", "Text size must be between 10 and 36.", id) }
+        }
         if d.schemaVersion != 1 { report("unsupported-version", "$.schemaVersion", "Use schema version 1. This file will not be rewritten.") }
         if d.theme.version != 1 { report("unsupported-theme", "$.theme.version", "Use theme version 1.") }
         if !(0.5...8).contains(d.theme.strokeWidth) { report("numeric-range", "$.theme.strokeWidth", "Stroke width must be between 0.5 and 8.") }
@@ -73,6 +76,7 @@ public enum Validator {
         for id in d.containers.keys.sorted() {
             let c = d.containers[id]!, p = "$.containers.\(id)"
             checkStroke(c.strokeWidth, path: p, id: id)
+            checkFontSize(c.fontSize, path: p, id: id)
             for (name, number) in [("width", c.width), ("height", c.height)] {
                 if let number, !number.isFinite || !(20...100000).contains(number) { report("numeric-range", p + "." + name, "Minimum size must be between 20 and 100000.", id) }
             }
@@ -117,6 +121,7 @@ public enum Validator {
         for id in d.nodes.keys.sorted() {
             let n = d.nodes[id]!, p = "$.nodes.\(id)"
             checkStroke(n.strokeWidth, path: p, id: id)
+            checkFontSize(n.fontSize, path: p, id: id)
             if n.type.isEmpty { report("empty-type", p + ".type", "Provide a semantic type.", id) }
             for (name, number) in [("width", n.width), ("height", n.height)] {
                 if let number, !(20...4000).contains(number) { report("numeric-range", p + "." + name, "Size must be between 20 and 4000.", id) }
@@ -127,6 +132,7 @@ public enum Validator {
         for id in d.connectors.keys.sorted() {
             let e = d.connectors[id]!, p = "$.connectors.\(id)"
             checkStroke(e.strokeWidth, path: p, id: id)
+            checkFontSize(e.fontSize, path: p, id: id)
             for (name, endpoint) in [("from", e.from), ("to", e.to)] where !ids.contains(endpoint.element) || endpoint.element == d.root {
                 report("missing-endpoint", p + "." + name + ".element", "Choose an existing node or non-root container.", id)
             }

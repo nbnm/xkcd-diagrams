@@ -54,8 +54,7 @@ public enum Renderer {
     public static func scene(_ document: Diagram) throws -> RenderScene {
         let layout = try LayoutEngine.layout(document)
         var drawings: [Drawing] = []
-        let font = Typography.font(document.theme)
-        let sketch = document.theme.preset == .sketch, palette = RenderPalette(document.theme.preset)
+        let sketch = document.theme.sketch, palette = RenderPalette(document.theme.preset)
         func penStroke(_ path: CGPath, id: String, connector: Bool = false) -> CGPath {
             sketch ? SketchStroke.path(path, seed: document.theme.seed ^ stableHash(id), connector: connector) : path
         }
@@ -128,12 +127,13 @@ public enum Renderer {
             }
             if node.shape != .cylinder && node.shape != .queue && !node.shape.isDocument && node.shape != .text { drawings.append(Drawing(path, stroke: 0.14, fill: node.shape == .actor ? nil : 1, width: width)) }
             var labelRect = (node.shape == .queue ? geometry.last!.boundingBoxOfPath : r).insetBy(dx: 18, dy: 12)
-            if node.shape == .file { labelRect = r.insetBy(dx: 22, dy: 12); labelRect.origin.y += 12; labelRect.size.height -= 12 }
+            if node.shape == .cylinder { labelRect = DatabaseContent.labelRect(in: r, hasLogo: node.asset != nil) }
+            else if node.shape == .file { labelRect = r.insetBy(dx: 22, dy: 12); labelRect.origin.y += 12; labelRect.size.height -= 12 }
             else if node.shape.isDocument { labelRect = CGRect(x: r.minX + 22, y: r.minY + 108, width: r.width - 44, height: r.height - 120) }
             if let assetID = node.asset, let asset = document.assets[assetID] {
-                let extraInset: CGFloat = node.shape == .cylinder ? 20 : 0
-                let logoY = node.shape.isDocument && node.shape != .file ? 102 : 14 + extraInset
-                let target = CGRect(x: r.midX - 50, y: r.minY + logoY, width: 100, height: 34)
+                let logoY: CGFloat = node.shape.isDocument && node.shape != .file ? 102 : 14
+                let target = node.shape == .cylinder ? DatabaseContent.logoRect(in: r)
+                    : CGRect(x: r.midX - 50, y: r.minY + logoY, width: 100, height: 34)
                 let variant = node.variant ?? .black
                 if variant == .white && !palette.lightInk { drawings.append(Drawing(CGPath(roundedRect: target.insetBy(dx: -5, dy: -5), cornerWidth: 4, cornerHeight: 4, transform: nil), fill: 0.15)) }
                 let scale = min(target.width / asset.viewBox[2], target.height / asset.viewBox[3])
@@ -145,19 +145,21 @@ public enum Renderer {
                     let p = try SVGPath.parse(data).copy(using: &transform)!
                     drawings.append(asset.rendering == .outline ? Drawing(p, stroke: ink, width: max(0.65, width * 0.65)) : Drawing(p, fill: ink, evenOdd: true))
                 }
-                labelRect.origin.y += 43 + extraInset; labelRect.size.height -= 43 + extraInset
+                if node.shape != .cylinder { labelRect.origin.y += 43; labelRect.size.height -= 43 }
             } else if node.shape == .actor { labelRect.origin.y += 68; labelRect.size.height -= 68 }
-            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: font), fill: 0.12))
+            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id)), fill: 0.12))
         }
         for id in layout.order where id != document.root && document.containers[id] != nil {
             let r = layout.frames[id]!, label = document.containers[id]!.label ?? "Container"
-            let textRect = CGRect(x: r.minX + 20, y: r.minY + 11, width: r.width - 40, height: 26)
-            drawings.append(Drawing(Typography.paths(label, in: textRect, font: Typography.font(document.theme, size: 14), centered: false), fill: 0.36))
+            let container = document.containers[id]!
+            let height = container.fontSize == nil ? 26 : Typography.containerHeaderHeight(container, theme: document.theme) - 22
+            let textRect = CGRect(x: r.minX + 20, y: r.minY + 11, width: r.width - 40, height: height)
+            drawings.append(Drawing(Typography.paths(label, in: textRect, font: Typography.font(document, for: id), centered: false), fill: 0.36))
         }
         for id in document.connectors.keys.sorted() {
             if let label = document.connectors[id]!.label, let rect = layout.labelFrames[id] {
                 drawings.append(Drawing(CGPath(rect: rect, transform: nil), fill: 1))
-                drawings.append(Drawing(Typography.paths(label, in: rect.insetBy(dx: 5, dy: 2), font: Typography.font(document.theme, size: 12)), fill: 0.32))
+                drawings.append(Drawing(Typography.paths(label, in: rect.insetBy(dx: 5, dy: 2), font: Typography.font(document, for: id)), fill: 0.32))
             }
         }
         // Include actual stroked geometry and glyph extents to avoid export clipping.
