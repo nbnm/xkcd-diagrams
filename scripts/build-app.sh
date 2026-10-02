@@ -1,0 +1,18 @@
+#!/bin/zsh
+set -euo pipefail
+project_dir="${0:A:h:h}"
+cd "$project_dir"
+source "$project_dir/scripts/environment.sh"
+configuration="${1:-release}"
+swift build -c "$configuration" "${swift_options[@]}"
+binary_dir="$(swift build -c "$configuration" --show-bin-path "${swift_options[@]}")"
+app_dir="$project_dir/dist/XKCD Diagrams.app"
+mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+cp "$binary_dir/XKCDDiagrams" "$app_dir/Contents/MacOS/XKCDDiagrams"
+cp -R "$binary_dir/XKCDDiagrams_DiagramCore.bundle" "$app_dir/Contents/Resources/"
+cp "$binary_dir/diagram" "$project_dir/dist/diagram"
+cp -R "$binary_dir/XKCDDiagrams_DiagramCore.bundle" "$project_dir/dist/"
+cp packaging/Info.plist "$app_dir/Contents/Info.plist"
+cp packaging/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"
+codesign --force --deep --sign - "$app_dir"
+printf '%s\n' "Built $app_dir" "CLI: $project_dir/dist/diagram"

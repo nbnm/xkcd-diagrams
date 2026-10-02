@@ -1,0 +1,7 @@
+interface:
+  display_name: "XKCD Diagrams"
+  short_description: "Create diagrams with the native app CLI"
+  default_prompt: "Use $xkcd-diagrams to create an editable diagram and render a Sketch preview."
+
+policy:
+  allow_implicit_invocation: true

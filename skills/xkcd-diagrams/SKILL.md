@@ -1,0 +1,36 @@
+---
+name: xkcd-diagrams
+description: Create, edit, render, or export diagrams using the XKCD Diagrams app CLI. Use whenever a diagram is requested, including architecture, IT systems, deployments, data flows, and flowcharts. Produce editable .diagram.json files and PNG or SVG images; honor explicitly requested alternative tools or source formats.
+---
+
+# XKCD Diagrams
+
+Use the app CLI as the default diagram authoring and rendering tool across projects. Author the same schema 1 JSON document used by the macOS editor. If the user explicitly chooses another tool or source format, follow that choice. The app need not be open; do not automate the editor to build a diagram.
+
+## Locate the CLI
+
+Run [scripts/diagram.sh](scripts/diagram.sh) from this skill's directory, using its absolute path so it works from any project. The helper uses `XKCD_DIAGRAM_CLI` when set; otherwise it runs `/Volumes/Work/xkcd-diagrams/dist/diagram`. The override is an executable path, not a command with extra arguments. If the CLI is missing, report the missing dependency instead of silently switching diagram engines.
+
+In the commands below, `diagram` means that helper. Run `diagram help`, `diagram schema`, and `diagram library list` to obtain current commands, property types, and available symbols with frozen logo geometry. Read [the format guide](references/format.md) when authoring a document. Do not invent unsupported fields or logo asset IDs.
+
+## Create and deliver
+
+Save outputs in the user's current project or requested output directory, using the project's diagram folder when one exists and `diagrams/` otherwise. Do not put another project's diagrams into the app's `Examples/` folder. Deliver an editable `<name>.diagram.json` and a PNG preview; render SVG when vector output is useful or requested. Link the JSON and image in the final response and show the PNG when appropriate.
+
+For a new diagram, run `diagram init <file.diagram.json>` (or `--example` for a sample), capture `diagram revision <file>`, and author a separate candidate JSON. Validate it with `diagram validate <candidate> --json`, then apply it with `diagram write <file> --from <candidate> --expect <revision>`. The CLI refuses to initialize over an existing document; use the editing workflow below for an existing path. Use the library's complete asset object in `assets` and reference it from the node so the document remains portable. Choose `variant: black` or `white`; default to black on white diagrams.
+
+Validate the saved file with `diagram validate <file> --json`, then render with `diagram render <file> --format png --output <preview.png> --scale 2`. Inspect the image for label placement, boundary crossings, and clutter. Adjust layout or manual waypoints when the result needs correction, then validate and render again. Use `--format svg` for vector delivery. Do not claim that automatic routing has avoided every obstacle when visible collisions remain.
+
+## Diagram conventions
+
+The default presentation is `signature-sketch`: monochrome strokes and readable handwriting. Use `standard`, `blueprint`, or `dark` when requested. Blueprint uses blue paper and white lines, labels, and logos. Dark uses charcoal paper with light gray lines, labels, and logos. Use T1A for the company and 8FDE for its team when referring to those entities. Use top-level `watermark: true` when a T1A logo watermark is requested; it appears in a reserved bottom-right footer on the canvas and exports. Preserve the user's system names and relationships; do not invent architecture details.
+
+Containers own an ordered `children` list. They can arrange children horizontally, vertically, or in a custom grid, or retain explicit free positions. Arrangement belongs to containers, never to individual nodes. Prefer nested stacks to large sets of coordinates; use free placement on the invisible root when the user positions boundaries manually. For an automatic custom grid, use `layout.mode: grid`, `rows`, `columns`, and optional `cells` keyed by direct child ID; read the format guide for cell coordinates and spans. For manual mixed top-level placement, set the root layout to `free` and place each top-level element with its own `position`. A monitoring container can sit below the main groups, using a horizontal child stack and optional minimum `width` and `height` (20–100000 points). Containers expand to fit contents. When converting an existing root stack to free placement, first inspect or derive its current frames and materialize positions so the main diagram stays in place; preserve existing connector settings. An element has one parent; containment cannot form cycles. `allowedChildTypes` is optional; the type for a nested container is `container`.
+
+Keep connectors orthogonal with perpendicular attachments. Sketch uses restrained pen variation on shapes and connectors; bends and attachments retain straight sections. Leave logos undistorted. Use the app's renderer for both the preview and final image so the CLI and editor show the same style.
+
+## Edit existing diagrams
+
+For an existing diagram, inspect the source and capture `diagram revision <file>` before editing. Preserve stable IDs, containment, child order, manually placed positions, theme settings, and connector waypoints unless the requested change requires updating them. When changing a container to a different horizontal, vertical, or grid arrangement, clear `waypoints` on connectors touching that container or its descendants and set affected endpoint sides to `auto`, matching the editor's rerouting behavior. Preserve unrelated connectors. For a line-width change to an individual object, set its optional `strokeWidth` (0.5–8) on the node, container, or connector. Keep `theme.strokeWidth` and all other objects intact; container stroke widths affect their boundary only. Omit the override to restore the default. Write a candidate file and validate it. Apply it with `diagram write <original> --from <candidate> --expect <captured-revision>`. If the revision changed, reread and reconcile the new content before writing. Do not bypass the guard to force the older candidate over newer work.
+
+The current editor is a prototype. All connectors meet attachment edges at 90 degrees; use `routing: orthogonal`. Explicit `waypoints` give manual control, with right-angle bends added between them and perpendicular approaches to the endpoints. Legacy `straight` values remain readable but use the same right-angle geometry. Automatic routing considers nearby obstacles, but cannot guarantee clearance in every arrangement. The library has five generic shapes, a Documents group with File, XLSX, PDF, and DOCX, and grouped vendor presets: Databricks main mark, Unity Catalog, Delta Lake, and lakehouse; Azure platform, Data Lake Storage, VM, Storage Account, SQL Database, and Azure OpenAI; AWS platform, S3, EC2, Lambda, and RDS; OpenAI and Anthropic identities with API presets. Query the CLI for exact IDs and complete geometry. Queue uses `shape: queue` to draw stacked messages. Documents use `type: file` and `shape: file`, `xlsx`, `pdf`, or `docx` for portrait sheets with folded corners. Format marks stay visible when labels are edited; labels can name files or documents.

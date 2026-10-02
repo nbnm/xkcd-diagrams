@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "order-platform",
+  "title": "Order platform",
+  "theme": {
+    "preset": "signature-sketch",
+    "version": 1,
+    "seed": 42,
+    "strokeWidth": 1.6
+  },
+  "root": "canvas",
+  "nodes": {
+    "gateway": {
+      "type": "api",
+      "label": "API Gateway",
+      "shape": "rectangle"
+    },
+    "orders": {
+      "type": "service",
+      "label": "Order Service",
+      "shape": "rectangle"
+    },
+    "store": {
+      "type": "database",
+      "label": "Order Database",
+      "shape": "cylinder"
+    }
+  },
+  "containers": {
+    "canvas": {
+      "layout": {
+        "mode": "horizontal",
+        "gap": 96
+      },
+      "children": [
+        "gateway",
+        "backend"
+      ]
+    },
+    "backend": {
+      "label": "Backend",
+      "layout": {
+        "mode": "vertical",
+        "gap": 32,
+        "padding": 24
+      },
+      "allowedChildTypes": [
+        "service",
+        "database"
+      ],
+      "children": [
+        "orders",
+        "store"
+      ]
+    }
+  },
+  "connectors": {
+    "request": {
+      "from": {
+        "element": "gateway",
+        "side": "right"
+      },
+      "to": {
+        "element": "orders",
+        "side": "left"
+      },
+      "label": "HTTPS",
+      "direction": "forward",
+      "routing": "orthogonal"
+    },
+    "persistence": {
+      "from": {
+        "element": "orders",
+        "side": "bottom"
+      },
+      "to": {
+        "element": "store",
+        "side": "top"
+      },
+      "label": "SQL",
+      "direction": "forward",
+      "routing": "orthogonal"
+    }
+  },
+  "assets": {}
+}

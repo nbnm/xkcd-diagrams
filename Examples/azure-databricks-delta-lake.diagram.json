@@ -1,0 +1,674 @@
+{
+  "assets" : {
+    "azure-data-lake" : {
+      "name" : "Data Lake Storage",
+      "paths" : [
+        "M17.1,3.6H9.69a.34.34,0,0,1-.22-.07L7.35,2.12a.43.43,0,0,0-.22-.06H.9a.4.4,0,0,0-.4.39v13.1a.4.4,0,0,0,.4.39H17.1a.4.4,0,0,0,.4-.39V4A.4.4,0,0,0,17.1,3.6Z",
+        "M2.21 2.82 H5.75 A0.16 0.16 0 0 1 5.91 2.98 V3.4299999999999997 A0.16 0.16 0 0 1 5.75 3.59 H2.21 A0.16 0.16 0 0 1 2.05 3.4299999999999997 V2.98 A0.16 0.16 0 0 1 2.21 2.82 Z",
+        "M2.1599999999999997 2.82 H2.71 A0.11 0.11 0 0 1 2.82 2.9299999999999997 V3.48 A0.11 0.11 0 0 1 2.71 3.59 H2.1599999999999997 A0.11 0.11 0 0 1 2.05 3.48 V2.9299999999999997 A0.11 0.11 0 0 1 2.1599999999999997 2.82 Z",
+        "M17.1,3.58H9a.36.36,0,0,0-.28.12L7.37,5a.43.43,0,0,1-.28.11H.9a.4.4,0,0,0-.4.4v10a.4.4,0,0,0,.4.39H17.1a.4.4,0,0,0,.4-.39V4A.4.4,0,0,0,17.1,3.58Z",
+        "M10.18,5.7a.15.15,0,0,0-.08,0s-.09,0-.13.07L6.81,10.36a.16.16,0,0,0,0,.16.19.19,0,0,0,.15.1H8.83L8,13.4a.13.13,0,0,0,.07.18.1.1,0,0,0,.07,0c.06,0,.09,0,.13-.07l3.26-4.66s0-.06,0-.1a.17.17,0,0,0-.17-.16h-2l.81-2.73A.13.13,0,0,0,10.18,5.7Z"
+      ],
+      "rendering" : "outline",
+      "source" : "https://learn.microsoft.com/en-us/azure/architecture/icons/",
+      "viewBox" : [
+        0,
+        0,
+        18,
+        18
+      ]
+    },
+    "databricks" : {
+      "name" : "Databricks",
+      "paths" : [
+        "M13.7194 6.60746L7.25506 10.338L0.332928 6.35214L0 6.53654L0 9.43016L7.25506 13.6004L13.7194 9.88406V11.416L7.25506 15.1465L0.332928 11.1607L0 11.3451L0 11.8415L7.25506 16.0117L14.4962 11.8415V8.94789L14.1633 8.76349L7.25506 12.7351L0.776832 9.01881L0.776832 7.4869L7.25506 11.2032L14.4962 7.033V4.18193L14.1356 3.96917L7.25506 7.92661L1.10976 4.40888L7.25506 0.876967L12.3045 3.78477L12.7484 3.52945V3.17484L7.25506 0.0117187L0 4.18193L0 4.63583L7.25506 8.80605L13.7194 5.07555V6.60746Z"
+      ],
+      "source" : "https://www.databricks.com/sites/default/files/2024-10/Databricks-Logo-Icon.svg",
+      "viewBox" : [
+        0,
+        0,
+        15,
+        17
+      ]
+    },
+    "delta-lake" : {
+      "name" : "Delta Lake",
+      "paths" : [
+        "M 51.328125 15.679688 C 50.625 14.464844 49.28125 13.695312 47.871094 13.695312 C 46.464844 13.695312 45.121094 14.464844 44.414062 15.679688 L 18.304688 60.929688 C 18.046875 61.441406 18.113281 62.078125 18.496094 62.464844 C 18.878906 62.847656 19.457031 62.976562 19.96875 62.785156 C 25.214844 60.480469 30.847656 59.199219 36.609375 59.070312 C 40.382812 59.007812 44.160156 59.96875 47.488281 61.761719 L 48.449219 60.097656 C 45.3125 58.238281 40.769531 57.089844 36.542969 57.089844 C 31.167969 57.214844 25.855469 58.304688 20.800781 60.289062 L 46.015625 16.640625 C 46.398438 16 47.105469 15.617188 47.808594 15.617188 C 48.574219 15.617188 49.214844 16 49.601562 16.640625 L 81.726562 70.527344 C 82.558594 71.871094 82.304688 73.664062 81.089844 74.753906 C 78.207031 77.3125 72.894531 80.382812 63.9375 80.382812 C 55.871094 80.382812 51.519531 77.824219 47.296875 75.390625 C 43.777344 73.34375 40.191406 71.230469 34.6875 70.785156 C 26.558594 70.144531 18.175781 73.792969 14.207031 75.648438 C 19.070312 69.054688 26.625 65.023438 34.753906 64.449219 C 41.792969 64 45.246094 66.046875 48.894531 68.222656 C 52.351562 70.273438 55.871094 72.382812 62.398438 72.382812 C 64.894531 72.382812 67.328125 71.9375 69.632812 71.105469 C 70.59375 70.785156 71.167969 69.695312 70.785156 68.734375 C 70.71875 68.609375 70.65625 68.480469 70.59375 68.351562 L 49.664062 32.769531 C 49.34375 32.191406 48.703125 31.808594 48 31.808594 C 47.296875 31.808594 46.65625 32.191406 46.273438 32.769531 L 36.160156 50.496094 C 35.648438 51.457031 35.96875 52.609375 36.863281 53.183594 C 37.054688 53.3125 37.246094 53.375 37.441406 53.375 C 41.664062 54.144531 45.695312 55.808594 49.28125 58.238281 L 50.367188 56.640625 C 46.65625 54.015625 42.367188 52.289062 37.886719 51.457031 L 37.886719 51.390625 L 48 33.664062 L 48.0625 33.664062 L 69.121094 69.3125 C 67.007812 70.078125 64.769531 70.464844 62.464844 70.464844 C 56.449219 70.464844 53.3125 68.542969 49.921875 66.558594 C 46.144531 64.320312 42.304688 62.015625 34.6875 62.464844 C 23.167969 63.167969 14.847656 70.65625 12.03125 75.457031 C 11.585938 76.222656 11.839844 77.183594 12.609375 77.632812 C 13.054688 77.886719 13.632812 77.953125 14.144531 77.695312 C 17.472656 76.097656 26.304688 71.871094 34.625 72.574219 C 39.679688 72.960938 42.945312 74.878906 46.464844 76.929688 C 50.878906 79.488281 55.488281 82.175781 64.0625 82.175781 C 73.601562 82.175781 79.359375 78.847656 82.496094 76.097656 C 84.351562 74.433594 84.800781 71.617188 83.519531 69.503906 Z M 51.328125 15.679688 "
+      ],
+      "source" : "https://www.databricks.com/sites/default/files/2023-03/icon-orange_delta-lake.svg",
+      "viewBox" : [
+        0,
+        0,
+        96,
+        96
+      ]
+    },
+    "unity-catalog" : {
+      "name" : "Unity Catalog",
+      "paths" : [
+        "M12.7647 8.92578L9.08691 11.0624V15.3356L12.7647 17.4722L16.4424 15.3356V11.0624L12.7647 8.92578Z",
+        "M20.5752 8.68166H24.8134L22.6768 5.00391L20.5752 8.68166Z",
+        "M20.5752 17.6816L22.7118 21.3594L24.8134 17.6816H20.5752Z",
+        "M10.6631 25.8789H14.9013L12.7647 22.2012L10.6631 25.8789Z",
+        "M0.750977 17.6816L2.85255 21.3594L4.98916 17.6816H0.750977Z",
+        "M0.750977 8.68166H4.98916L2.85255 5.00391L0.750977 8.68166Z",
+        "M10.6631 0.519531L12.7997 4.19729L14.9013 0.519531H10.6631Z",
+        "M16.8278 1.2207L14.376 5.49391L18.6492 7.94575L21.101 3.67254L16.8278 1.2207Z",
+        "M25.1643 10.7129H20.2256V15.6516H25.1643V10.7129Z",
+        "M18.6492 18.418L14.376 20.8698L16.8278 25.143L21.101 22.6912L18.6492 18.418Z",
+        "M6.91473 18.418L4.46289 22.6912L8.7361 25.143L11.1879 20.8698L6.91473 18.418Z",
+        "M5.33909 10.7129H0.400391V15.6516H5.33909V10.7129Z",
+        "M8.7361 1.25586L4.46289 3.7077L6.91473 7.9809L11.1879 5.52906L8.7361 1.25586Z"
+      ],
+      "source" : "https://www.databricks.com/sites/default/files/2024-12/logo-color-unity-catalog.svg",
+      "viewBox" : [
+        0,
+        0,
+        26,
+        26
+      ]
+    }
+  },
+  "connectors" : {
+    "batch-ingest" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "batch-sources",
+        "side" : "right"
+      },
+      "label" : "Batch / CDC",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "data-factory",
+        "side" : "left"
+      }
+    },
+    "batch-landing" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "data-factory",
+        "side" : "right"
+      },
+      "label" : "Copy files",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "landing",
+        "side" : "left"
+      },
+      "waypoints" : [
+        {
+          "x" : 660,
+          "y" : 844
+        },
+        {
+          "x" : 660,
+          "y" : 1045
+        }
+      ]
+    },
+    "bronze-silver" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "bronze",
+        "side" : "right"
+      },
+      "label" : "Clean + deduplicate",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "silver",
+        "side" : "left"
+      }
+    },
+    "catalog-lake" : {
+      "dashed" : true,
+      "direction" : "forward",
+      "from" : {
+        "element" : "catalog",
+        "side" : "bottom"
+      },
+      "label" : "Governed access",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "lake",
+        "side" : "top"
+      },
+      "waypoints" : [
+        {
+          "x" : 1448,
+          "y" : 850
+        },
+        {
+          "x" : 1220,
+          "y" : 850
+        }
+      ]
+    },
+    "gold-sql" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "gold",
+        "side" : "top"
+      },
+      "label" : "Query Delta",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "warehouse",
+        "side" : "bottom"
+      }
+    },
+    "identity-storage" : {
+      "dashed" : true,
+      "direction" : "forward",
+      "from" : {
+        "element" : "storage-access",
+        "side" : "top"
+      },
+      "label" : "Storage RBAC",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "lake",
+        "side" : "bottom"
+      }
+    },
+    "landing-spark" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "landing",
+        "side" : "right"
+      },
+      "label" : "Auto Loader",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "spark",
+        "side" : "left"
+      },
+      "waypoints" : [
+        {
+          "x" : 934,
+          "y" : 1055
+        },
+        {
+          "x" : 934,
+          "y" : 685
+        },
+        {
+          "x" : 1040,
+          "y" : 685
+        }
+      ]
+    },
+    "silver-gold" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "silver",
+        "side" : "right"
+      },
+      "label" : "Aggregate",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "gold",
+        "side" : "left"
+      }
+    },
+    "spark-bronze" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "spark",
+        "side" : "bottom"
+      },
+      "label" : "Write Delta",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "bronze",
+        "side" : "top"
+      }
+    },
+    "sql-apps" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "warehouse",
+        "side" : "right"
+      },
+      "label" : "JDBC / ODBC",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "applications",
+        "side" : "left"
+      }
+    },
+    "sql-bi" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "warehouse",
+        "side" : "right"
+      },
+      "label" : "SQL",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "power-bi",
+        "side" : "left"
+      }
+    },
+    "stream-ingest" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "event-sources",
+        "side" : "right"
+      },
+      "label" : "Events",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "event-hubs",
+        "side" : "left"
+      }
+    },
+    "stream-spark" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "event-hubs",
+        "side" : "right"
+      },
+      "label" : "Structured Streaming",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "spark",
+        "side" : "left"
+      }
+    },
+    "workspace-jobs" : {
+      "dashed" : true,
+      "direction" : "forward",
+      "from" : {
+        "element" : "workspace",
+        "side" : "bottom"
+      },
+      "label" : "Manage compute",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "compute",
+        "side" : "top"
+      }
+    }
+  },
+  "containers" : {
+    "azure" : {
+      "children" : [
+        "ingestion",
+        "compute",
+        "lake",
+        "storage-access"
+      ],
+      "height" : 955,
+      "label" : "Customer Azure subscription / one region",
+      "layout" : {
+        "gap" : 60,
+        "mode" : "free",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 300,
+        "y" : 370
+      },
+      "width" : 1485
+    },
+    "canvas" : {
+      "children" : [
+        "heading",
+        "managed",
+        "sources",
+        "azure",
+        "consumers",
+        "operations",
+        "legend"
+      ],
+      "label" : "Canvas",
+      "layout" : {
+        "gap" : 60,
+        "mode" : "free",
+        "padding" : 24
+      }
+    },
+    "compute" : {
+      "children" : [
+        "spark",
+        "warehouse"
+      ],
+      "height" : 240,
+      "label" : "Customer VNet / classic Databricks compute",
+      "layout" : {
+        "gap" : 60,
+        "mode" : "free",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 330,
+        "y" : 100
+      },
+      "width" : 1070
+    },
+    "consumers" : {
+      "children" : [
+        "power-bi",
+        "applications"
+      ],
+      "label" : "Data consumers",
+      "layout" : {
+        "gap" : 82,
+        "mode" : "vertical",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 1850,
+        "y" : 530
+      }
+    },
+    "ingestion" : {
+      "children" : [
+        "event-hubs",
+        "data-factory"
+      ],
+      "label" : "Azure ingestion",
+      "layout" : {
+        "gap" : 82,
+        "mode" : "vertical",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 0,
+        "y" : 80
+      },
+      "width" : 288
+    },
+    "lake" : {
+      "children" : [
+        "landing",
+        "bronze",
+        "silver",
+        "gold"
+      ],
+      "height" : 270,
+      "label" : "ADLS Gen2 / Delta Lake",
+      "layout" : {
+        "gap" : 65,
+        "mode" : "horizontal",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 330,
+        "y" : 430
+      },
+      "width" : 1070
+    },
+    "managed" : {
+      "children" : [
+        "catalog",
+        "workspace"
+      ],
+      "height" : 225,
+      "label" : "Databricks-managed services / control plane",
+      "layout" : {
+        "gap" : 60,
+        "mode" : "free",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 660,
+        "y" : 115
+      },
+      "width" : 1070
+    },
+    "operations" : {
+      "children" : [
+        "entra",
+        "key-vault",
+        "monitor",
+        "observability"
+      ],
+      "height" : 225,
+      "label" : "Identity, security & operations / cross-cutting",
+      "layout" : {
+        "gap" : 175,
+        "mode" : "horizontal",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 0,
+        "y" : 1440
+      },
+      "width" : 2110
+    },
+    "sources" : {
+      "children" : [
+        "event-sources",
+        "batch-sources"
+      ],
+      "label" : "Source systems",
+      "layout" : {
+        "gap" : 82,
+        "mode" : "vertical",
+        "padding" : 24
+      },
+      "position" : {
+        "x" : 0,
+        "y" : 430
+      }
+    }
+  },
+  "id" : "azure-databricks-delta-lake",
+  "nodes" : {
+    "applications" : {
+      "height" : 112,
+      "label" : "Applications\nSQL / JDBC / ODBC",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 220
+    },
+    "batch-sources" : {
+      "height" : 112,
+      "label" : "Databases / SaaS\nFile drops",
+      "shape" : "cylinder",
+      "type" : "database",
+      "width" : 270
+    },
+    "bronze" : {
+      "asset" : "delta-lake",
+      "height" : 166,
+      "label" : "Bronze\nRaw Delta tables",
+      "shape" : "cylinder",
+      "type" : "database",
+      "variant" : "black",
+      "width" : 200
+    },
+    "catalog" : {
+      "asset" : "unity-catalog",
+      "height" : 142,
+      "label" : "Unity Catalog\nPermissions + lineage",
+      "position" : {
+        "x" : 610,
+        "y" : 0
+      },
+      "shape" : "rectangle",
+      "type" : "service",
+      "variant" : "black",
+      "width" : 260
+    },
+    "data-factory" : {
+      "height" : 112,
+      "label" : "Azure Data Factory\nBatch / CDC",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 240
+    },
+    "entra" : {
+      "height" : 120,
+      "label" : "Microsoft Entra ID\nUsers + service principals",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 310
+    },
+    "event-hubs" : {
+      "height" : 112,
+      "label" : "Azure Event Hubs\nEvent streaming",
+      "shape" : "queue",
+      "type" : "queue",
+      "width" : 240
+    },
+    "event-sources" : {
+      "height" : 112,
+      "label" : "Applications / IoT\nEvent producers",
+      "shape" : "queue",
+      "type" : "queue",
+      "width" : 220
+    },
+    "gold" : {
+      "asset" : "delta-lake",
+      "height" : 166,
+      "label" : "Gold\nBusiness-ready tables",
+      "shape" : "cylinder",
+      "type" : "database",
+      "variant" : "black",
+      "width" : 200
+    },
+    "heading" : {
+      "height" : 88,
+      "label" : "Azure Databricks - Delta Lake\nClassic-compute reference deployment",
+      "position" : {
+        "x" : 0,
+        "y" : 0
+      },
+      "shape" : "text",
+      "type" : "annotation",
+      "width" : 2090
+    },
+    "key-vault" : {
+      "height" : 120,
+      "label" : "Azure Key Vault\nExternal source secrets",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 310
+    },
+    "landing" : {
+      "asset" : "azure-data-lake",
+      "height" : 166,
+      "label" : "ADLS Gen2 landing\nRaw files / volumes",
+      "shape" : "cylinder",
+      "type" : "database",
+      "variant" : "black",
+      "width" : 200
+    },
+    "legend" : {
+      "height" : 92,
+      "label" : "Solid arrows: data / query flow. Dashed arrows: orchestration, governance and identity.\nBronze -> Silver -> Gold transformations run on Spark. Delta files and transaction logs stay on ADLS Gen2.",
+      "position" : {
+        "x" : 0,
+        "y" : 1700
+      },
+      "shape" : "text",
+      "type" : "annotation",
+      "width" : 2090
+    },
+    "monitor" : {
+      "height" : 120,
+      "label" : "Azure Monitor\nLog Analytics + alerts",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 310
+    },
+    "observability" : {
+      "height" : 120,
+      "label" : "Databricks system tables\nRuns, cost + audit logs",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 310
+    },
+    "power-bi" : {
+      "height" : 112,
+      "label" : "Power BI\nReports + dashboards",
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 220
+    },
+    "silver" : {
+      "asset" : "delta-lake",
+      "height" : 166,
+      "label" : "Silver\nValidated + conformed",
+      "shape" : "cylinder",
+      "type" : "database",
+      "variant" : "black",
+      "width" : 200
+    },
+    "spark" : {
+      "asset" : "databricks",
+      "height" : 142,
+      "label" : "Spark job clusters\nIngest + transform",
+      "position" : {
+        "x" : 380,
+        "y" : 0
+      },
+      "shape" : "rectangle",
+      "type" : "service",
+      "variant" : "black",
+      "width" : 250
+    },
+    "storage-access" : {
+      "height" : 135,
+      "label" : "Azure Databricks\nAccess Connector\nManaged identity",
+      "position" : {
+        "x" : 840,
+        "y" : 760
+      },
+      "shape" : "rectangle",
+      "type" : "service",
+      "width" : 265
+    },
+    "warehouse" : {
+      "asset" : "databricks",
+      "height" : 142,
+      "label" : "Databricks SQL\nClassic warehouse",
+      "position" : {
+        "x" : 770,
+        "y" : 0
+      },
+      "shape" : "rectangle",
+      "type" : "service",
+      "variant" : "black",
+      "width" : 250
+    },
+    "workspace" : {
+      "asset" : "databricks",
+      "height" : 142,
+      "label" : "Azure Databricks\nWorkspace + Jobs",
+      "position" : {
+        "x" : 0,
+        "y" : 0
+      },
+      "shape" : "rectangle",
+      "type" : "service",
+      "variant" : "black",
+      "width" : 260
+    }
+  },
+  "root" : "canvas",
+  "schemaVersion" : 1,
+  "theme" : {
+    "fontSize" : 20,
+    "preset" : "standard",
+    "seed" : 42,
+    "strokeWidth" : 1.8,
+    "version" : 1
+  },
+  "title" : "Azure Databricks - Delta Lake deployment",
+  "watermark" : true
+}

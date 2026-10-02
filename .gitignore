@@ -1,0 +1,8 @@
+.build/
+dist/
+.DS_Store
+.swiftpm/
+*.png
+*.diagram.json.lock
+!Sources/**/Resources/**
+!assets/**

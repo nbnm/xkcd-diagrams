@@ -1,0 +1,351 @@
+{
+  "assets" : {
+    "azure" : {
+      "name" : "Microsoft Azure",
+      "paths" : [
+        "M89.158 18.266h69.238L86.523 231.224a11.041 11.041 0 01-10.461 7.51H22.179a11.023 11.023 0 01-10.445-14.548l66.963-198.41a11.04 11.04 0 0110.461-7.51z",
+        "M189.77 161.104H79.976a5.083 5.083 0 00-3.468 8.8l70.552 65.847a11.091 11.091 0 007.567 2.983h62.167z",
+        "M89.158 18.266a10.95 10.95 0 00-10.483 7.654L11.817 224.006a11.01 11.01 0 0010.393 14.728h55.274a11.814 11.814 0 009.069-7.714l13.33-39.29 47.625 44.418a11.267 11.267 0 007.089 2.586h61.937l-27.166-77.63-79.19.018 48.47-142.856z",
+        "M177.592 25.764a11.023 11.023 0 00-10.444-7.498H89.984a11.024 11.024 0 0110.445 7.498l66.967 198.421a11.024 11.024 0 01-10.445 14.549h77.164a11.024 11.024 0 0010.444-14.549z"
+      ],
+      "source" : "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/acom_social_icon_azure",
+      "viewBox" : [
+        0,
+        0,
+        256,
+        256
+      ]
+    },
+    "claude-api" : {
+      "name" : "Anthropic",
+      "paths" : [
+        "M29.016191 11.099001 L22.056196 0.270000 L18.300000 0.270000 L18.300000 15.740022 L21.503814 15.740022 L21.503814 4.911006 L28.463810 15.740022 L32.219992 15.740022 L32.219992 0.270000 L29.016191 0.270000 L29.016191 11.099001 L29.016191 11.099001 Z M34.870000 3.253504 L40.062736 3.253504 L40.062736 15.740022 L43.377257 15.740022 L43.377257 3.253504 L48.570007 3.253504 L48.570007 0.270000 L34.870000 0.270000 L34.870000 3.253504 L34.870000 3.253504 Z M61.835715 6.435900 L54.544290 6.435900 L54.544290 0.270000 L51.230000 0.270000 L51.230000 15.740022 L54.544290 15.740022 L54.544290 9.419405 L61.835715 9.419405 L61.835715 15.740022 L65.149992 15.740022 L65.149992 0.270000 L61.835715 0.270000 L61.835715 6.435900 L61.835715 6.435900 Z M82.456461 4.977304 C82.456461 2.060097 80.312649 0.270000 76.798577 0.270000 L69.240000 0.270000 L69.240000 15.740022 L72.555170 15.740022 L72.555170 9.684594 L76.245826 9.684594 L79.561218 15.740022 L83.230057 15.740022 L79.559006 9.223379 C81.401579 8.515062 82.456461 7.023532 82.456461 4.977304 L82.456461 4.977304 Z M72.555170 3.253504 L76.643866 3.253504 C78.279341 3.253504 79.141291 3.850194 79.141291 4.977304 C79.141291 6.104400 78.279341 6.701103 76.643866 6.701103 L72.555170 6.701103 L72.555170 3.253504 L72.555170 3.253504 Z M92.612088 0.000000 C88.149303 0.000000 84.990000 3.314922 84.990000 8.022094 C84.990000 12.685078 88.149303 16.000000 92.612088 16.000000 C97.052785 16.000000 100.190028 12.685078 100.190028 8.022094 C100.190028 3.314922 97.052785 0.000000 92.612088 0.000000 L92.612088 0.000000 Z M92.612088 12.906073 C90.005111 12.906073 88.414422 11.049725 88.414422 8.022094 C88.414422 4.950275 90.005111 3.093927 92.612088 3.093927 C95.196977 3.093927 96.765578 4.950275 96.765578 8.022094 C96.765578 11.049725 95.196977 12.906073 92.612088 12.906073 L92.612088 12.906073 Z M110.850600 0.270000 L103.290000 0.270000 L103.290000 15.740022 L106.606057 15.740022 L106.606057 10.126594 L110.850600 10.126594 C114.365612 10.126594 116.509999 8.270200 116.509999 5.198304 C116.509999 2.126394 114.365612 0.270000 110.850600 0.270000 L110.850600 0.270000 Z M110.695848 7.143104 L106.606057 7.143104 L106.606057 3.253504 L110.695848 3.253504 C112.331761 3.253504 113.193942 3.916505 113.193942 5.198304 C113.193942 6.480103 112.331761 7.143104 110.695848 7.143104 L110.695848 7.143104 Z M138.954844 10.541440 C138.380370 12.044202 137.231435 12.906073 135.662707 12.906073 C133.055518 12.906073 131.464687 11.049725 131.464687 8.022094 C131.464687 4.950275 133.055518 3.093927 135.662707 3.093927 C137.231435 3.093927 138.380370 3.955798 138.954844 5.458560 L142.467860 5.458560 C141.606211 2.143652 139.021112 0.000000 135.662707 0.000000 C131.199546 0.000000 128.040000 3.314922 128.040000 8.022094 C128.040000 12.685078 131.199546 16.000000 135.662707 16.000000 C139.043215 16.000000 141.628301 13.834254 142.489977 10.541440 L138.954844 10.541440 L138.954844 10.541440 Z M117.830000 0.270000 L123.997709 15.740022 L127.380004 15.740022 L121.212294 0.270000 L117.830000 0.270000 L117.830000 0.270000 Z M6.166755 0.270000 L0.000000 15.740022 L3.448077 15.740022 L4.709278 12.491300 L11.160936 12.491300 L12.421928 15.740022 L15.870006 15.740022 L9.703250 0.270000 L6.166755 0.270000 L6.166755 0.270000 Z M5.824605 9.618297 L7.935003 4.181694 L10.045400 9.618297 L5.824605 9.618297 L5.824605 9.618297 Z"
+      ],
+      "source" : "https://www.anthropic.com/",
+      "viewBox" : [
+        0,
+        0,
+        143,
+        16
+      ]
+    },
+    "databricks" : {
+      "name" : "Databricks",
+      "paths" : [
+        "M13.7194 6.60746L7.25506 10.338L0.332928 6.35214L0 6.53654L0 9.43016L7.25506 13.6004L13.7194 9.88406V11.416L7.25506 15.1465L0.332928 11.1607L0 11.3451L0 11.8415L7.25506 16.0117L14.4962 11.8415V8.94789L14.1633 8.76349L7.25506 12.7351L0.776832 9.01881L0.776832 7.4869L7.25506 11.2032L14.4962 7.033V4.18193L14.1356 3.96917L7.25506 7.92661L1.10976 4.40888L7.25506 0.876967L12.3045 3.78477L12.7484 3.52945V3.17484L7.25506 0.0117187L0 4.18193L0 4.63583L7.25506 8.80605L13.7194 5.07555V6.60746Z"
+      ],
+      "source" : "https://www.databricks.com/sites/default/files/2024-10/Databricks-Logo-Icon.svg",
+      "viewBox" : [
+        0,
+        0,
+        15,
+        17
+      ]
+    }
+  },
+  "connectors" : {
+    "connection-06908e8b" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "lakehouse",
+        "side" : "auto"
+      },
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "ingestion",
+        "side" : "auto"
+      }
+    },
+    "connection-467e1baa" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "service-1754de",
+        "side" : "auto"
+      },
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "catalog",
+        "side" : "auto"
+      }
+    },
+    "connection-6d08297f" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "group-166404",
+        "side" : "auto"
+      },
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "assistant",
+        "side" : "auto"
+      }
+    },
+    "connection-739b7bbd" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "sources",
+        "side" : "auto"
+      },
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "group-2a3e8b",
+        "side" : "auto"
+      }
+    },
+    "connection-ad32756c" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "service-1754de",
+        "side" : "auto"
+      },
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "queue-c7c1a7",
+        "side" : "auto"
+      }
+    },
+    "govern" : {
+      "dashed" : true,
+      "direction" : "forward",
+      "from" : {
+        "element" : "catalog",
+        "side" : "auto"
+      },
+      "label" : "Governance",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "lakehouse",
+        "side" : "auto"
+      }
+    },
+    "ingest" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "sources",
+        "side" : "auto"
+      },
+      "label" : "Batch / CDC",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "ingestion",
+        "side" : "auto"
+      }
+    },
+    "query" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "lakehouse",
+        "side" : "auto"
+      },
+      "label" : "SQL / API",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "assistant",
+        "side" : "auto"
+      }
+    },
+    "store" : {
+      "dashed" : false,
+      "direction" : "forward",
+      "from" : {
+        "element" : "ingestion",
+        "side" : "auto"
+      },
+      "label" : "Delta",
+      "routing" : "orthogonal",
+      "to" : {
+        "element" : "lakehouse",
+        "side" : "auto"
+      }
+    }
+  },
+  "containers" : {
+    "canvas" : {
+      "children" : [
+        "xlsx-172607",
+        "database-fbbe40",
+        "assistant",
+        "queue-c7c1a7",
+        "group-166404",
+        "platform",
+        "service-1754de",
+        "group-2a3e8b",
+        "sources"
+      ],
+      "layout" : {
+        "gap" : 28,
+        "mode" : "free",
+        "padding" : 28
+      }
+    },
+    "group-166404" : {
+      "children" : [
+        "actor-b0df24",
+        "docx-45f557",
+        "pdf-dcdc3f",
+        "queue-6a6ae2"
+      ],
+      "label" : "Container",
+      "layout" : {
+        "gap" : 28,
+        "mode" : "horizontal",
+        "padding" : 28
+      },
+      "position" : {
+        "x" : 810.0504656650774,
+        "y" : 0
+      }
+    },
+    "group-2a3e8b" : {
+      "children" : [
+
+      ],
+      "label" : "Container",
+      "layout" : {
+        "gap" : 28,
+        "mode" : "horizontal",
+        "padding" : 28
+      },
+      "position" : {
+        "x" : 0,
+        "y" : 753.9537606852641
+      },
+      "width" : 1716
+    },
+    "platform" : {
+      "allowedChildTypes" : [
+        "service",
+        "database"
+      ],
+      "children" : [
+        "ingestion",
+        "lakehouse",
+        "catalog"
+      ],
+      "label" : "Databricks Platform",
+      "layout" : {
+        "gap" : 28,
+        "mode" : "vertical",
+        "padding" : 28
+      },
+      "position" : {
+        "x" : 164.88473398332007,
+        "y" : 5.333876085782819
+      },
+      "strokeWidth" : 1.7000000000000002
+    }
+  },
+  "id" : "t1a-data-platform",
+  "nodes" : {
+    "actor-b0df24" : {
+      "label" : "Person",
+      "shape" : "actor",
+      "type" : "actor"
+    },
+    "assistant" : {
+      "label" : "AI Application",
+      "position" : {
+        "x" : 1546,
+        "y" : 170.8148193359375
+      },
+      "shape" : "rectangle",
+      "type" : "application"
+    },
+    "catalog" : {
+      "label" : "Unity Catalog",
+      "shape" : "rectangle",
+      "type" : "service"
+    },
+    "database-fbbe40" : {
+      "label" : "Database",
+      "position" : {
+        "x" : 1348,
+        "y" : 170.8148193359375
+      },
+      "shape" : "cylinder",
+      "type" : "database"
+    },
+    "docx-45f557" : {
+      "label" : "DOCX",
+      "shape" : "docx",
+      "type" : "file"
+    },
+    "ingestion" : {
+      "label" : "Ingestion",
+      "shape" : "rectangle",
+      "type" : "service"
+    },
+    "lakehouse" : {
+      "asset" : "databricks",
+      "label" : "Lakehouse",
+      "shape" : "cylinder",
+      "type" : "database"
+    },
+    "pdf-dcdc3f" : {
+      "label" : "PDFs",
+      "shape" : "rectangle",
+      "type" : "file",
+      "width" : 120
+    },
+    "queue-6a6ae2" : {
+      "label" : "Message Queue",
+      "shape" : "rectangle",
+      "type" : "queue"
+    },
+    "queue-c7c1a7" : {
+      "label" : "Queue",
+      "position" : {
+        "x" : 575.6945527973314,
+        "y" : 0
+      },
+      "shape" : "queue",
+      "type" : "queue"
+    },
+    "service-1754de" : {
+      "label" : "System",
+      "position" : {
+        "x" : 480,
+        "y" : 340
+      },
+      "shape" : "rectangle",
+      "type" : "service"
+    },
+    "sources" : {
+      "label" : "Enterprise Systems",
+      "position" : {
+        "x" : 790.3575440254897,
+        "y" : 561.714156008509
+      },
+      "shape" : "rectangle",
+      "type" : "application"
+    },
+    "xlsx-172607" : {
+      "label" : "XLSX",
+      "position" : {
+        "x" : 1200,
+        "y" : 135
+      },
+      "shape" : "xlsx",
+      "type" : "file"
+    }
+  },
+  "root" : "canvas",
+  "schemaVersion" : 1,
+  "theme" : {
+    "fontFamily" : "ChalkboardSE-Regular",
+    "fontSize" : 16,
+    "preset" : "standard",
+    "seed" : 42,
+    "strokeWidth" : 1.9000000000000001,
+    "version" : 1
+  },
+  "title" : "T1A Data Platform",
+  "watermark" : true
+}

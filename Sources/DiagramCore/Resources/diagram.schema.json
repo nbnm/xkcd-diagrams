@@ -1,0 +1,416 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "theme": {
+      "$ref": "#/$defs/theme"
+    },
+    "watermark": {
+      "type": "boolean",
+      "default": false,
+      "description": "Adds the T1A logo in a reserved bottom-right footer on the canvas and image exports."
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "containers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/container"
+      }
+    },
+    "connectors": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/connector"
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/asset"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "root",
+    "nodes",
+    "containers"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XKCD Diagram Schema 1",
+  "$defs": {
+    "point": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": -100000,
+          "maximum": 100000
+        },
+        "y": {
+          "type": "number",
+          "minimum": -100000,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "shape": {
+          "enum": [
+            "rectangle",
+            "roundedRectangle",
+            "cylinder",
+            "queue",
+            "file",
+            "xlsx",
+            "pdf",
+            "docx",
+            "actor",
+            "text"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/point"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 4000
+        },
+        "height": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 4000
+        },
+        "asset": {
+          "type": "string"
+        },
+        "variant": {
+          "enum": [
+            "black",
+            "white"
+          ]
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/strokeWidth",
+          "description": "Line width for this node only; omitted values use theme.strokeWidth."
+        }
+      },
+      "required": [
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "horizontal",
+            "vertical",
+            "free",
+            "grid"
+          ]
+        },
+        "gap": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "padding": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Custom grid rows; only used by mode grid."
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Custom grid columns; only used by mode grid."
+        },
+        "cells": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/gridCell"
+          },
+          "description": "Optional assignments keyed by direct child ID. Unassigned children fill free cells in child-list order."
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "container": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "layout": {
+          "$ref": "#/$defs/layout"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "allowedChildTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "position": {
+          "$ref": "#/$defs/point"
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/strokeWidth",
+          "description": "Line width for this container only; omitted values use theme.strokeWidth."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 100000,
+          "description": "Minimum container width in points; grows to fit children and padding. Omit for automatic sizing."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 100000,
+          "description": "Minimum container height in points; grows to fit children and padding. Omit for automatic sizing."
+        }
+      },
+      "required": [
+        "layout",
+        "children"
+      ],
+      "additionalProperties": false
+    },
+    "endpoint": {
+      "type": "object",
+      "properties": {
+        "element": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side": {
+          "enum": [
+            "auto",
+            "left",
+            "right",
+            "top",
+            "bottom"
+          ]
+        }
+      },
+      "required": [
+        "element"
+      ],
+      "additionalProperties": false
+    },
+    "connector": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "to": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "label": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "none",
+            "forward",
+            "both"
+          ]
+        },
+        "routing": {
+          "description": "Use orthogonal. Legacy straight values remain readable; all routes use right-angle bends and perpendicular attachments.",
+          "enum": [
+            "straight",
+            "orthogonal"
+          ]
+        },
+        "dashed": {
+          "type": "boolean"
+        },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        },
+        "strokeWidth": {
+          "$ref": "#/$defs/strokeWidth",
+          "description": "Line width for this connector only; omitted values use theme.strokeWidth."
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "asset": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "viewBox": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "rendering": {
+          "enum": [
+            "solid",
+            "outline"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "viewBox",
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "preset": {
+          "enum": [
+            "signature-sketch",
+            "standard",
+            "blueprint",
+            "dark"
+          ]
+        },
+        "version": {
+          "const": 1
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "fontFamily": {
+          "type": "string"
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 36
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "strokeWidth": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 8
+    },
+    "gridCell": {
+      "type": "object",
+      "properties": {
+        "row": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "rowSpan": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "columnSpan": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        }
+      },
+      "required": [
+        "row",
+        "column"
+      ],
+      "additionalProperties": false,
+      "description": "One-based cell coordinates and spans. Assignments must fit the configured grid and cannot overlap."
+    }
+  }
+}
