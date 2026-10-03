@@ -13,7 +13,7 @@ public struct LibraryItem: Codable, Identifiable {
 
 public enum Library {
     public static let documentGroup = "Documents"
-    public static let groups = ["Databricks", "Azure", "AWS", "OpenAI", "Anthropic"]
+    public static let groups = ["T1A", "Databricks", "Azure", "AWS", "OpenAI", "Anthropic"]
     public static func items() -> [LibraryItem] {
         guard let url = Bundle.module.url(forResource: "library", withExtension: "json", subdirectory: "Resources"),
               let data = try? Data(contentsOf: url), let items = try? JSONDecoder().decode([LibraryItem].self, from: data) else { return [] }

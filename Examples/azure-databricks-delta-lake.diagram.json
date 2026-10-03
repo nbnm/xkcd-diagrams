@@ -176,7 +176,7 @@
       "routing" : "orthogonal",
       "to" : {
         "element" : "warehouse",
-        "side" : "bottom"
+        "side" : "auto"
       }
     },
     "identity-storage" : {
@@ -204,22 +204,8 @@
       "routing" : "orthogonal",
       "to" : {
         "element" : "spark",
-        "side" : "left"
-      },
-      "waypoints" : [
-        {
-          "x" : 934,
-          "y" : 1055
-        },
-        {
-          "x" : 934,
-          "y" : 685
-        },
-        {
-          "x" : 1040,
-          "y" : 685
-        }
-      ]
+        "side" : "auto"
+      }
     },
     "silver-gold" : {
       "dashed" : false,
@@ -240,7 +226,7 @@
       "direction" : "forward",
       "from" : {
         "element" : "spark",
-        "side" : "bottom"
+        "side" : "auto"
       },
       "label" : "Write Delta",
       "routing" : "orthogonal",
@@ -254,7 +240,7 @@
       "direction" : "forward",
       "from" : {
         "element" : "warehouse",
-        "side" : "right"
+        "side" : "auto"
       },
       "label" : "JDBC / ODB",
       "routing" : "orthogonal",
@@ -269,7 +255,7 @@
       "direction" : "forward",
       "from" : {
         "element" : "warehouse",
-        "side" : "right"
+        "side" : "auto"
       },
       "label" : "SQL",
       "routing" : "orthogonal",
@@ -304,7 +290,7 @@
       "routing" : "orthogonal",
       "to" : {
         "element" : "spark",
-        "side" : "left"
+        "side" : "auto"
       }
     },
     "workspace-jobs" : {
@@ -318,7 +304,7 @@
       "routing" : "orthogonal",
       "to" : {
         "element" : "compute",
-        "side" : "top"
+        "side" : "auto"
       }
     }
   },
@@ -367,17 +353,19 @@
         "spark",
         "warehouse"
       ],
+      "fontSize" : 27,
       "height" : 240,
       "label" : "Customer VNet / classic Databricks compute",
       "layout" : {
-        "gap" : 60,
-        "mode" : "free",
+        "gap" : 52,
+        "mode" : "horizontal",
         "padding" : 24
       },
       "position" : {
         "x" : 330,
         "y" : 100
       },
+      "strokeWidth" : 1.4,
       "width" : 1070
     },
     "consumers" : {
@@ -705,7 +693,7 @@
   "theme" : {
     "fontFamily" : "Helvetica",
     "fontSize" : 22,
-    "preset" : "blueprint",
+    "preset" : "standard",
     "seed" : 42,
     "sketch" : false,
     "strokeWidth" : 1.8,

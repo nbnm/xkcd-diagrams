@@ -160,6 +160,99 @@ func sketchSettingHasStrictBooleanValidation() throws {
     try expect(properties["sketch"]?["type"] as? String == "boolean")
 }
 
+func brandThemesKeepReadableSemanticColorsInPNGAndSVG() throws {
+    for (preset, paper, container, surface, ink, accent, outline) in [
+        (ThemePreset.secondStack, "#0b0d10", "#0b0d10", "#14171b", "#f4f6f8", "#2fb5f4", "#f4f6f8"),
+        (.eightFDE, "#ffffff", "#ffffff", "#ffffff", "#111827", "#5d4be8", "#0c6e85")
+    ] {
+        for isSketch in [false, true] {
+            var d = Library.sample(); d.theme.preset = preset; d.theme.sketch = isSketch; d.watermark = true
+            let before = d, scene = try Renderer.scene(d), palette = scene.palette
+            try expect(palette.backgroundHex == paper)
+            try expect(palette.hex(1, role: .container) == container && palette.hex(1, role: .surface) == surface)
+            try expect(palette.hex(0.12) == ink && palette.hex(0.32, role: .accent) == accent && palette.hex(0.14, role: .outline) == outline)
+            try expect(scene.drawings.filter { $0.stroke == 0.32 || $0.stroke == 0.46 }.allSatisfy { $0.strokeRole == .accent })
+            try expect(scene.drawings.filter { $0.fill == 0.12 }.allSatisfy { $0.fillRole == .neutral })
+            for (gray, role) in [(CGFloat(1), PaintRole.neutral), (1, .container), (1, .surface), (0.12, .neutral), (0.32, .accent), (0.14, .outline)] {
+                let color = palette.color(gray, role: role).components!, hex = palette.hex(gray, role: role)
+                let value = UInt32(hex.dropFirst(), radix: 16)!
+                try expect(Int((color[0] * 255).rounded()) == Int((value >> 16) & 255))
+                try expect(Int((color[1] * 255).rounded()) == Int((value >> 8) & 255))
+                try expect(Int((color[2] * 255).rounded()) == Int(value & 255))
+            }
+            let svg = String(decoding: try Renderer.svg(d), as: UTF8.self)
+            try expect(svg.contains("stroke=\"\(accent)\"") && svg.contains("fill=\"\(accent)\""))
+            try expect(svg.contains("fill=\"\(ink)\"") && svg.contains("fill=\"\(container)\"") && svg.contains("fill=\"\(surface)\""))
+            try expect(svg.contains("stroke=\"\(outline)\""))
+            try expect(!svg.contains("blueprint-paper"))
+            let source = CGImageSourceCreateWithData(try Renderer.png(d, scale: 1) as CFData, nil)!
+            let image = CGImageSourceCreateImageAtIndex(source, 0, nil)!
+            let bitmap = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)!
+            bitmap.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            let bytes = bitmap.data!.assumingMemoryBound(to: UInt8.self)
+            for hex in Set([paper, container, surface, ink, accent, outline]) {
+                let value = UInt32(hex.dropFirst(), radix: 16)!, r = UInt8((value >> 16) & 255), g = UInt8((value >> 8) & 255), b = UInt8(value & 255)
+                var matches = 0
+                for i in stride(from: 0, to: image.width * image.height * 4, by: 4) {
+                    if bytes[i] == r && bytes[i + 1] == g && bytes[i + 2] == b && bytes[i + 3] == 255 { matches += 1 }
+                }
+                try expect(matches > 100)
+            }
+            let transparent = String(decoding: try Renderer.svg(d, transparent: true), as: UTF8.self)
+            try expect(!transparent.contains("<rect") && transparent.contains("opacity=\"0.400\""))
+            try expect(d == before && Diagram.decode(d.encoded()) == d)
+        }
+    }
+}
+
+func eightFDEUsesBrandShapeLinesAndWhiteContainers() throws {
+    for isSketch in [false, true] {
+        var d = Diagram(theme: Theme(preset: .eightFDE, sketch: isSketch, fontFamily: "Helvetica"))
+        d.containers["objects"] = Container(label: "Objects", layout: .init(mode: .grid, gap: 60, rows: 2, columns: 5), children: Shape.allCases.map(\.rawValue))
+        d.containers[d.root]?.children = ["objects"]
+        for shape in Shape.allCases { d.nodes[shape.rawValue] = Node(label: shape.title, shape: shape) }
+        d.connectors["relationship"] = Connector(from: Endpoint("rectangle", side: .right), to: Endpoint("roundedRectangle", side: .left), label: "unchanged")
+        let original = d, scene = try Renderer.scene(d)
+        let shapes = scene.drawings.filter { $0.stroke == 0.14 }
+        try expect(shapes.count > Shape.allCases.count)
+        try expect(shapes.allSatisfy { $0.strokeRole == .outline && scene.palette.hex($0.stroke!, role: $0.strokeRole) == "#0c6e85" })
+        let containers = scene.drawings.filter { $0.fillRole == .container }
+        try expect(containers.count == 1 && containers.allSatisfy { scene.palette.hex($0.fill!, role: $0.fillRole) == "#ffffff" })
+        let relationships = scene.drawings.filter { $0.stroke == 0.32 }
+        try expect(relationships.count == 2 && relationships.allSatisfy { scene.palette.hex($0.stroke!, role: $0.strokeRole) == "#5d4be8" })
+        try expect(scene.drawings.filter { $0.fill == 0.12 }.allSatisfy { scene.palette.hex($0.fill!, role: $0.fillRole) == "#111827" })
+        var standard = d; standard.theme.preset = .standard
+        let standardScene = try Renderer.scene(standard)
+        try expect(scene.layout.frames == standardScene.layout.frames && scene.layout.routes == standardScene.layout.routes)
+        try expect(zip(scene.drawings, standardScene.drawings).allSatisfy { $0.path == $1.path })
+        try expect(d == original && Diagram.decode(d.encoded()) == original)
+    }
+}
+
+func brandThemesPreserveWhiteLogoContrastAndSchemaChoices() throws {
+    let schema = try JSONSerialization.jsonObject(with: Library.schema()) as! [String: Any]
+    let definitions = schema["$defs"] as! [String: [String: Any]]
+    let properties = definitions["theme"]!["properties"] as! [String: [String: Any]]
+    try expect(Set(properties["preset"]!["enum"] as! [String]) == Set(ThemePreset.allCases.map(\.rawValue) + ["signature-sketch"]))
+    for preset in [ThemePreset.secondStack, .eightFDE] {
+        var d = Library.sample(); d.theme.preset = preset
+        for id in d.nodes.keys where d.nodes[id]?.asset != nil { d.nodes[id]?.variant = .black }
+        let black = try Renderer.svg(d)
+        for id in d.nodes.keys where d.nodes[id]?.asset != nil { d.nodes[id]?.variant = .white }
+        let white = try Renderer.svg(d)
+        if preset == .secondStack { try expect(white == black) }
+        else {
+            let scene = try Renderer.scene(d)
+            try expect(white != black && scene.drawings.contains { $0.fill == 0.15 })
+            try expect(scene.palette.hex(0.15) == "#111827" && scene.palette.hex(1) == "#ffffff")
+        }
+        let original = d
+        d.theme.preset = .standard; d.theme.preset = preset
+        try expect(d == original && Diagram.decode(d.encoded()) == d)
+    }
+}
+
 func allColorThemesSupportIndependentSketchAndCleanExports() throws {
     var source = Library.sample(); source.theme.fontFamily = "Helvetica-Oblique"; source.watermark = true
     source.nodes["lakehouse"]?.strokeWidth = 2.8
@@ -169,12 +262,13 @@ func allColorThemesSupportIndependentSketchAndCleanExports() throws {
         var clean = source; clean.theme.preset = preset; clean.theme.sketch = false
         var sketch = clean; sketch.theme.sketch = true
         let before = sketch, a = try Renderer.scene(clean), b = try Renderer.scene(sketch)
-        let paper = preset == .blueprint ? "#0b3d91" : preset == .dark ? "#181818" : "#ffffff"
+        let paper = preset == .secondStack ? "#0b0d10" : preset == .blueprint ? "#0b3d91" : preset == .dark ? "#181818" : "#ffffff"
         try expect(a.palette.backgroundHex == paper && b.palette.backgroundHex == paper)
         try expect(a.layout.frames == b.layout.frames && a.layout.routes == b.layout.routes && a.layout.bounds == b.layout.bounds)
         try expect(a.drawings.count == b.drawings.count)
         for (exact, hand) in zip(a.drawings, b.drawings) {
             try expect(exact.width == hand.width && exact.dashed == hand.dashed && exact.fill == hand.fill && exact.stroke == hand.stroke)
+            try expect(exact.fillRole == hand.fillRole && exact.strokeRole == hand.strokeRole)
             if exact.stroke == nil { try expect(exact.path.svgData == hand.path.svgData) }
         }
         let edge = b.drawings.first { $0.stroke == 0.32 }!
@@ -197,7 +291,7 @@ func allColorThemesSupportIndependentSketchAndCleanExports() throws {
         sketch.theme.sketch = false
         try expect(sketch == clean)
     }
-    try expect(exports.count == 6)
+    try expect(exports.count == 10)
 }
 
 func canonicalRoundTrip() throws {
@@ -730,7 +824,7 @@ func fileRoundTripsAndExportsWithAttachedConnector() throws {
     d = try Diagram.decode(d.encoded())
     try expect(d.nodes["file"]?.shape == .file && d.nodes["file"]?.type == "file")
     let layout = try LayoutEngine.layout(d), frame = layout.frames["file"]!
-    try expect(frame.width == 120 && frame.height == 144)
+    try expect(frame.width == 192 && frame.height == 144)
     let body = SymbolGeometry.paths(.file, in: frame)[0]
     try expect(body.contains(CGPoint(x: frame.midX, y: frame.midY)))
     try expect(!body.contains(CGPoint(x: frame.maxX - 2, y: frame.minY + 2)))
@@ -781,9 +875,59 @@ func watermarkIsOptionalAndRendersInReservedFooter() throws {
 
 func groupedLibraryHasProductSymbols() throws {
     let items = Library.items()
-    try expect(items.filter { $0.group == "Systems" }.count == 5)
+    try expect(items.filter { $0.group == "Systems" }.count == 6)
     for group in Library.groups { try expect(items.filter { $0.group == group }.count >= 2) }
     for id in ["unity-catalog", "delta-lake", "azure-data-lake", "azure-vm", "aws-s3", "aws-ec2"] { try expect(items.contains { $0.id == id && $0.asset != nil }) }
+}
+
+func t1aPlatformsAndAIAgentStayPortableAcrossStyles() throws {
+    let library = Library.items(), brands = library.filter { $0.group == "T1A" }
+    try expect(Set(brands.map(\.id)) == ["secondstack", "lakesentry", "8fde", "antares", "t1a"])
+    try expect(brands.allSatisfy { $0.shape == .rectangle && $0.type == "service" && $0.asset?.source?.hasPrefix("https://") == true })
+    let agent = library.first { $0.id == "ai-agent" }!
+    try expect(agent.title == "AI Agent" && agent.group == "Systems" && agent.shape == .roundedRectangle && agent.type == "agent")
+    let items = brands + [agent]
+    var original = Diagram()
+    original.containers["platforms"] = Container(label: "T1A Platforms", layout: .init(mode: .grid, gap: 60, rows: 2, columns: 3),
+        children: items.map(\.id), allowedChildTypes: ["service", "agent"])
+    original.containers[original.root]?.children = ["platforms"]
+    for item in items {
+        let asset = item.asset!
+        try expect(!asset.paths.isEmpty && asset.rendering != .outline)
+        let box = CGRect(x: asset.viewBox[0], y: asset.viewBox[1], width: asset.viewBox[2], height: asset.viewBox[3]).insetBy(dx: -0.01, dy: -0.01)
+        for path in asset.paths { try expect(box.contains(try SVGPath.parse(path).boundingBoxOfPath)) }
+        original.assets[item.id] = asset
+        original.nodes[item.id] = item.node()
+        original.nodes[item.id]?.label = "Custom \(item.title) label"
+        try expect(original.nodes[item.id]?.asset == item.id && original.nodes[item.id]?.variant == .black)
+    }
+    original.connectors["agent-platform"] = Connector(from: Endpoint("ai-agent"), to: Endpoint("secondstack"), label: "Invoke")
+    for (preset, isSketch) in themeVariants {
+        var d = original; d.theme = Theme(preset: preset, sketch: isSketch, fontFamily: "Helvetica")
+        let scene = try Renderer.scene(d), before = d
+        try expect(try Diagram.decode(d.encoded()) == d)
+        try expect(scene.layout.frames.keys.contains("ai-agent") && scene.layout.routes["agent-platform"] != nil)
+        for item in items {
+            let asset = d.assets[item.id]!, frame = scene.layout.frames[item.id]!
+            let target = CGRect(x: frame.midX - 50, y: frame.minY + 14, width: 100, height: 34)
+            let scale = min(target.width / asset.viewBox[2], target.height / asset.viewBox[3])
+            var transform = CGAffineTransform(a: scale, b: 0, c: 0, d: scale,
+                tx: target.midX - asset.viewBox[2] * scale / 2 - asset.viewBox[0] * scale,
+                ty: target.midY - asset.viewBox[3] * scale / 2 - asset.viewBox[1] * scale)
+            for data in asset.paths {
+                let expected = try SVGPath.parse(data).copy(using: &transform)!.svgData
+                try expect(scene.drawings.contains { $0.fill == 0.12 && $0.path.svgData == expected })
+            }
+        }
+        let black = try Renderer.svg(d)
+        try expect(CGImageSourceCreateWithData(try Renderer.png(d, scale: 0.25) as CFData, nil) != nil)
+        try expect(d == before)
+        for id in d.nodes.keys { d.nodes[id]?.variant = .white }
+        try expect(try Diagram.decode(d.encoded()) == d)
+        let white = try Renderer.svg(d)
+        if RenderPalette(preset).lightInk { try expect(black == white) }
+        else { try expect(black != white && Renderer.scene(d).drawings.filter { $0.fill == 0.15 }.count == 6) }
+    }
 }
 
 func documentPresetsRetainTheirFormatWhenRenamed() throws {
@@ -819,6 +963,80 @@ func documentPresetsRetainTheirFormatWhenRenamed() throws {
         try expect(try Renderer.svg(d) == a)
         try expect(!String(decoding: a, as: UTF8.self).contains("<text"))
         try expect(CGImageSourceCreateWithData(try Renderer.png(d, scale: 1) as CFData, nil) != nil)
+    }
+}
+
+func documentShapesKeepFourByThreeWhenResized() throws {
+    let vendor = Library.items().first { $0.id == "databricks" }!
+    for shape in Shape.allCases where shape.isDocument {
+        for (width, height) in [(nil, nil), (320.0, nil), (nil, 300.0), (120.0, 144.0), (600.0, 80.0), (80.0, 600.0)] as [(Double?, Double?)] {
+            var d = Diagram()
+            d.nodes["document"] = Node(type: "file", label: "Plan", shape: shape, width: width, height: height)
+            d.nodes["other"] = Node(label: "Unchanged", position: Point(x: 1000, y: 0), width: 330, height: 210)
+            d.containers[d.root]?.children = ["document", "other"]
+            d.connectors["read"] = Connector(from: Endpoint("document", side: .right), to: Endpoint("other", side: .left))
+            let original = d, layout = try LayoutEngine.layout(d), frame = layout.frames["document"]!
+            try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+            try expect(frame.width >= width ?? shape.defaultWidth)
+            try expect(frame.height >= height ?? shape.defaultHeight)
+            try expect(layout.frames["other"]!.size == CGSize(width: 330, height: 210))
+            try expect(layout.routes["read"]!.first == CGPoint(x: frame.maxX, y: frame.midY))
+            try expectRightAngleAttachments(layout.routes["read"]!, source: .right, destination: .left)
+            try expect(d == original && Diagram.decode(d.encoded()) == original)
+        }
+        var small = Diagram(theme: Theme(fontSize: 10))
+        small.assets[vendor.id] = vendor.asset
+        small.nodes["document"] = Node(type: "file", label: "A", shape: shape, width: 80, height: 20, asset: vendor.id, variant: .white)
+        small.containers[small.root]?.children = ["document"]
+        let scene = try Renderer.scene(small), frame = scene.layout.frames["document"]!
+        try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+        try expect(scene.drawings.filter { $0.stroke == nil }.allSatisfy { frame.contains($0.path.boundingBoxOfPath) })
+    }
+}
+
+func documentTextGrowthKeepsRatioAcrossLayoutsAndExports() throws {
+    let vendor = Library.items().first { $0.id == "databricks" }!
+    for (preset, isSketch) in themeVariants {
+        for mode in LayoutMode.allCases {
+            var d = Diagram(theme: Theme(preset: preset, sketch: isSketch))
+            d.assets[vendor.id] = vendor.asset
+            d.containers["documents"] = Container(label: "Documents", layout: .init(mode: mode, rows: mode == .grid ? 2 : nil, columns: mode == .grid ? 2 : nil), width: 1300, height: 1000)
+            d.containers[d.root]?.layout = .init(mode: .grid, rows: 1, columns: 1)
+            d.containers[d.root]?.children = ["documents"]
+            for (index, shape) in Shape.allCases.filter(\.isDocument).enumerated() {
+                let id = shape.rawValue
+                d.nodes[id] = Node(type: "file", label: "Quarterly operations and monitoring report\nSecond line gjpqy", shape: shape,
+                    position: Point(x: Double(index % 2) * 650, y: Double(index / 2) * 450), width: 200, height: 150,
+                    asset: vendor.id, fontSize: 36)
+                d.containers["documents"]?.children.append(id)
+            }
+            let original = d, scene = try Renderer.scene(d)
+            for (id, node) in d.nodes {
+                let frame = scene.layout.frames[id]!
+                try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+                try expect(frame.width > 200 && frame.height > 150)
+                let top: CGFloat = node.shape == .file ? 24 : 108
+                let rect = CGRect(x: frame.minX + 22, y: frame.minY + top + 43, width: frame.width - 44, height: frame.height - top - 12 - 43)
+                let font = Typography.font(d, for: id)
+                let lineHeight = CTFontGetAscent(font) + CTFontGetDescent(font) + 5
+                try expect(CGFloat(Typography.lines(node.label, font: font, maxWidth: rect.width).count) * lineHeight <= rect.height)
+                let label = Typography.paths(node.label, in: rect, font: font)
+                try expect(frame.insetBy(dx: 10, dy: 10).contains(label.boundingBoxOfPath))
+                try expect(scene.drawings.contains { $0.path == label })
+                let logoBottom = frame.minY + (node.shape == .file ? 14 : 102) + 34
+                try expect(label.boundingBoxOfPath.minY > logoBottom)
+                if node.shape != .file {
+                    let details = SymbolGeometry.paths(node.shape, in: frame)
+                    try expect(details.dropFirst(2).allSatisfy { $0.boundingBoxOfPath.maxY < label.boundingBoxOfPath.minY })
+                }
+            }
+            try expect(d == original && Diagram.decode(d.encoded()) == original)
+            if mode == .grid {
+                let svg = try Renderer.svg(d)
+                try expect(try Renderer.svg(d) == svg)
+                try expect(CGImageSourceCreateWithData(try Renderer.png(d, scale: 0.25) as CFData, nil) != nil)
+            }
+        }
     }
 }
 
@@ -1156,6 +1374,10 @@ func expectThrows(_ body: () throws -> Void, line: UInt = #line) throws {
 }
 
 let checks: [(String, () throws -> Void)] = [
+    ("t1aPlatformsAndAIAgentStayPortableAcrossStyles", t1aPlatformsAndAIAgentStayPortableAcrossStyles),
+    ("brandThemesKeepReadableSemanticColorsInPNGAndSVG", brandThemesKeepReadableSemanticColorsInPNGAndSVG),
+    ("eightFDEUsesBrandShapeLinesAndWhiteContainers", eightFDEUsesBrandShapeLinesAndWhiteContainers),
+    ("brandThemesPreserveWhiteLogoContrastAndSchemaChoices", brandThemesPreserveWhiteLogoContrastAndSchemaChoices),
     ("fontSizeEditsAffectOnlyTheirTargetAndResetToDefaults", fontSizeEditsAffectOnlyTheirTargetAndResetToDefaults),
     ("perElementFontSizesReachExportsWithoutChangingOtherLabels", perElementFontSizesReachExportsWithoutChangingOtherLabels),
     ("individualLargeLabelsFitShapesContainersAndConnectors", individualLargeLabelsFitShapesContainersAndConnectors),
@@ -1203,6 +1425,8 @@ let checks: [(String, () throws -> Void)] = [
     ("arrangementChangesReattachAndRerouteConnections", arrangementChangesReattachAndRerouteConnections),
     ("groupedLibraryHasProductSymbols", groupedLibraryHasProductSymbols),
     ("documentPresetsRetainTheirFormatWhenRenamed", documentPresetsRetainTheirFormatWhenRenamed),
+    ("documentShapesKeepFourByThreeWhenResized", documentShapesKeepFourByThreeWhenResized),
+    ("documentTextGrowthKeepsRatioAcrossLayoutsAndExports", documentTextGrowthKeepsRatioAcrossLayoutsAndExports),
     ("connectorsRespectAllAttachmentSides", connectorsRespectAllAttachmentSides),
     ("manualAndLegacyStraightConnectionsStayPerpendicular", manualAndLegacyStraightConnectionsStayPerpendicular),
     ("databaseConnectionsMeetCurvedOutlines", databaseConnectionsMeetCurvedOutlines),

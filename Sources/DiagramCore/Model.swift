@@ -6,7 +6,8 @@ public enum Shape: String, Codable, CaseIterable {
     public var isDocument: Bool {
         switch self { case .file, .xlsx, .pdf, .docx: return true; default: return false }
     }
-    public var defaultWidth: Double { isDocument ? 120 : 170 }
+    public var fixedAspectRatio: Double? { isDocument ? 4.0 / 3.0 : nil }
+    public var defaultWidth: Double { isDocument ? 192 : 170 }
     public var defaultHeight: Double { isDocument ? 144 : 76 }
     public var title: String {
         switch self {
@@ -23,7 +24,18 @@ public enum Shape: String, Codable, CaseIterable {
         }
     }
 }
-public enum ThemePreset: String, Codable, CaseIterable { case standard, blueprint, dark }
+public enum ThemePreset: String, Codable, CaseIterable {
+    case standard, blueprint, dark, secondStack = "secondstack", eightFDE = "8fde"
+    public var displayName: String {
+        switch self {
+        case .standard: return "Standard"
+        case .blueprint: return "Blueprint"
+        case .dark: return "Dark"
+        case .secondStack: return "SecondStack"
+        case .eightFDE: return "8FDE"
+        }
+    }
+}
 public enum AssetRendering: String, Codable { case solid, outline }
 public enum Side: String, Codable, CaseIterable { case auto, left, right, top, bottom }
 public enum Direction: String, Codable, CaseIterable { case none, forward, both }

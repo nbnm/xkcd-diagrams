@@ -108,11 +108,13 @@
           "$ref": "#/$defs/point"
         },
         "width": {
+          "description": "Minimum node width. File, XLSX, PDF, and DOCX grow width and height together to preserve a 4:3 ratio and fit content.",
           "type": "number",
           "minimum": 20,
           "maximum": 4000
         },
         "height": {
+          "description": "Minimum node height. File, XLSX, PDF, and DOCX grow width and height together to preserve a 4:3 ratio and fit content.",
           "type": "number",
           "minimum": 20,
           "maximum": 4000
@@ -354,12 +356,14 @@
       "type": "object",
       "properties": {
         "preset": {
-          "description": "Color theme. The legacy signature-sketch value reads as standard with sketch enabled; new files use standard, blueprint, or dark.",
+          "description": "Color theme: standard, blueprint, dark, secondstack (near-black and cyan), or 8fde (white surfaces, #0c6e85 object outlines, and violet connectors). The legacy signature-sketch value reads as standard with sketch enabled.",
           "enum": [
             "signature-sketch",
             "standard",
             "blueprint",
-            "dark"
+            "dark",
+            "secondstack",
+            "8fde"
           ]
         },
         "sketch": {

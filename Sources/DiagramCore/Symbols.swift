@@ -1,6 +1,25 @@
 import Foundation
 import CoreGraphics
 
+/// Folded sheets keep space for their format details and optional logo above the label.
+enum DocumentContent {
+    static let horizontalInset: CGFloat = 22
+    static let bottomInset: CGFloat = 12
+    static let logoSpace: CGFloat = 43
+    static let minimumLogoWidth: CGFloat = 144
+
+    static func topInset(_ shape: Shape) -> CGFloat { shape == .file ? 24 : 108 }
+    static func verticalPadding(_ shape: Shape, hasLogo: Bool) -> CGFloat {
+        topInset(shape) + bottomInset + (hasLogo ? logoSpace : 0)
+    }
+    static func labelRect(_ shape: Shape, in frame: CGRect, hasLogo: Bool) -> CGRect {
+        CGRect(x: frame.minX + horizontalInset,
+               y: frame.minY + topInset(shape) + (hasLogo ? logoSpace : 0),
+               width: frame.width - horizontalInset * 2,
+               height: frame.height - verticalPadding(shape, hasLogo: hasLogo))
+    }
+}
+
 /// Shared content space keeps database labels and logos below the curved lid.
 enum DatabaseContent {
     static let topInset: CGFloat = 40
@@ -105,24 +124,53 @@ public enum SymbolGeometry {
     }
 }
 
+/// Semantic colors let brand themes accent relationships without coloring body text or logos.
+public enum PaintRole: Equatable { case neutral, container, surface, accent, outline }
+
 public struct RenderPalette {
+    public let preset: ThemePreset
     public let blueprint: Bool
     public let dark: Bool
     public var lightInk: Bool { blueprint || dark }
-    public init(_ preset: ThemePreset) { blueprint = preset == .blueprint; dark = preset == .dark }
+    public init(_ preset: ThemePreset) {
+        self.preset = preset; blueprint = preset == .blueprint
+        dark = preset == .dark || preset == .secondStack
+    }
     public var background: CGColor {
+        if preset == .secondStack { return rgb(backgroundHex) }
         if blueprint { return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, components: [11 / 255, 61 / 255, 145 / 255, 1])! }
         if dark { return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, components: [24 / 255, 24 / 255, 24 / 255, 1])! }
         return CGColor(gray: 1, alpha: 1)
     }
-    public var backgroundHex: String { blueprint ? "#0b3d91" : dark ? "#181818" : "#ffffff" }
+    public var backgroundHex: String { preset == .secondStack ? "#0b0d10" : blueprint ? "#0b3d91" : dark ? "#181818" : "#ffffff" }
+    private func brandHex(_ gray: CGFloat, role: PaintRole) -> String? {
+        guard preset == .secondStack || preset == .eightFDE else { return nil }
+        let secondStack = preset == .secondStack
+        switch role {
+        case .accent: return secondStack ? "#2fb5f4" : "#5d4be8"
+        case .outline: return secondStack ? "#f4f6f8" : "#0c6e85"
+        case .container: return backgroundHex
+        case .surface: return secondStack ? "#14171b" : "#ffffff"
+        case .neutral:
+            if gray >= 0.99 { return backgroundHex }
+            if gray <= 0.15 { return secondStack ? "#f4f6f8" : "#111827" }
+            return secondStack ? "#a7aeb6" : "#5f6878"
+        }
+    }
+    private func rgb(_ hex: String) -> CGColor {
+        let value = UInt32(hex.dropFirst(), radix: 16)!
+        return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, components:
+            [CGFloat((value >> 16) & 255) / 255, CGFloat((value >> 8) & 255) / 255, CGFloat(value & 255) / 255, 1])!
+    }
     private func ink(_ gray: CGFloat) -> CGFloat { blueprint ? 1 : dark ? 1 - gray : gray }
-    public func color(_ gray: CGFloat) -> CGColor {
+    public func color(_ gray: CGFloat, role: PaintRole = .neutral) -> CGColor {
+        if let hex = brandHex(gray, role: role) { return rgb(hex) }
         if lightInk && gray >= 0.99 { return background }
         if dark { let value = ink(gray); return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, components: [value, value, value, 1])! }
         return CGColor(gray: ink(gray), alpha: 1)
     }
-    public func hex(_ gray: CGFloat) -> String {
+    public func hex(_ gray: CGFloat, role: PaintRole = .neutral) -> String {
+        if let hex = brandHex(gray, role: role) { return hex }
         if lightInk && gray >= 0.99 { return backgroundHex }
         let c = Int((ink(gray) * 255).rounded()); return String(format: "#%02x%02x%02x", c, c, c)
     }

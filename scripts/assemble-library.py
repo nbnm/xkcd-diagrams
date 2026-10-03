@@ -12,9 +12,11 @@ from pathlib import Path
 
 cache = Path(sys.argv[1])
 destination = Path(__file__).resolve().parents[1] / "Sources/DiagramCore/Resources/library.json"
-items = [item for item in json.loads(destination.read_text()) if item["id"] in ["service", "database", "queue", "file", "xlsx", "pdf", "docx", "actor", "text"]]
+previous = json.loads(destination.read_text())
+platforms = [item for item in previous if item["group"] == "T1A"]
+items = [item for item in previous if item["id"] in ["service", "database", "queue", "file", "xlsx", "pdf", "docx", "actor", "text", "ai-agent"]]
 for item in items:
-    item["title"] = {"service": "System", "database": "Database", "queue": "Queue", "file": "File", "xlsx": "XLSX", "pdf": "PDF", "docx": "DOCX", "actor": "Person", "text": "Text"}[item["id"]]
+    item["title"] = {"service": "System", "database": "Database", "queue": "Queue", "file": "File", "xlsx": "XLSX", "pdf": "PDF", "docx": "DOCX", "actor": "Person", "text": "Text", "ai-agent": "AI Agent"}[item["id"]]
     if item["id"] == "queue": item["shape"] = "queue"
     if item["id"] in ["file", "xlsx", "pdf", "docx"]: item["group"] = "Documents"
 
@@ -177,5 +179,6 @@ for ident, title, filename, shape, kind in [
     add(ident, title, product_asset(filename, title, "https://aws.amazon.com/architecture/icons/"), "cloud", group="AWS", shape=shape, kind=kind)
 add("openai-api", "OpenAI API", next(i["asset"] for i in items if i["id"] == "openai"), "sparkle", group="OpenAI")
 add("claude-api", "Claude API", next(i["asset"] for i in items if i["id"] == "anthropic"), "asterisk", group="Anthropic")
+items.extend(platforms)
 destination.write_text(json.dumps(items, indent=2) + "\n")
-print(f"Frozen {len(items)} library entries in five vendor groups")
+print(f"Frozen {len(items)} library entries; retained T1A platform marks and AI Agent")

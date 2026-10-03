@@ -6,7 +6,7 @@ struct EditorView: View {
     @Binding var appAppearance: AppAppearance
     @Environment(\.colorScheme) private var colorScheme
     @State private var search = ""
-    @State private var expandedGroups: Set<String> = ["Documents", "Databricks"]
+    @State private var expandedGroups: Set<String> = ["Documents", "T1A", "Databricks"]
     private let poll = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var body: some View {
         VStack(spacing: 0) {
@@ -42,8 +42,8 @@ struct EditorView: View {
             }
             ToolbarItemGroup {
                 Picker("Color theme", selection: Binding(get: { store.document.theme.preset }, set: { value in store.mutate("Change color theme") { $0.theme.preset = value } })) {
-                    Text("Standard").tag(ThemePreset.standard); Text("Blueprint").tag(ThemePreset.blueprint); Text("Dark").tag(ThemePreset.dark)
-                }.pickerStyle(.segmented).frame(width: 240)
+                    ForEach(ThemePreset.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }.pickerStyle(.menu).frame(width: 140)
                     .accessibilityLabel("Color theme")
                     .help("Choose diagram colors for the canvas and exports; app appearance is controlled separately")
                 HStack(spacing: 6) {
@@ -286,6 +286,7 @@ struct Inspector: View {
                 ForEach(Shape.allCases, id: \.self) { Text($0.title).tag($0) }
             }
             Stepper("Width  \(Int(current.width ?? current.shape.defaultWidth))", value: Binding(get: { let node = store.document.nodes[id] ?? snapshot; return node.width ?? node.shape.defaultWidth }, set: { v in store.mutate("Resize system") { $0.nodes[id]?.width = v } }), in: 80...600, step: 10)
+            if current.shape.isDocument { Text("4:3 aspect ratio · grows to fit content").font(.caption).foregroundStyle(.secondary) }
             Picker("Logo", selection: Binding(get: { store.document.nodes[id]?.asset ?? "__none" }, set: { value in
                 store.mutate("Change logo") { d in
                     if value == "__none" { d.nodes[id]?.asset = nil; d.nodes[id]?.variant = nil }
@@ -294,12 +295,13 @@ struct Inspector: View {
             })) {
                 Text("None").tag("__none")
                 if let key = snapshot.asset, !store.library.contains(where: { $0.id == key }) { Text(store.document.assets[key]?.name ?? key).tag(key) }
+                ForEach(store.library.filter { $0.asset != nil && !Library.groups.contains($0.group) }) { item in Text(item.title).tag(item.id) }
                 ForEach(Library.groups, id: \.self) { group in
                     Section(group) { ForEach(store.library.filter { $0.group == group && $0.asset != nil }) { item in Text(item.title).tag(item.id) } }
                 }
             }
             if store.document.nodes[id]?.asset != nil {
-                if store.scene.palette.lightInk { Text(store.document.theme.preset == .blueprint ? "Blueprint renders marks in white." : "Dark renders marks in light gray.").font(.system(size: 11)).foregroundStyle(.secondary) }
+                if store.scene.palette.lightInk { Text("\(store.document.theme.preset.displayName) renders marks in light ink.").font(.system(size: 11)).foregroundStyle(.secondary) }
                 else { Picker("Mark", selection: Binding(get: { store.document.nodes[id]?.variant ?? .black }, set: { v in store.mutate("Change logo variant") { $0.nodes[id]?.variant = v } })) {
                     Text("Black").tag(LogoVariant.black); Text("White").tag(LogoVariant.white)
                 }.pickerStyle(.segmented) }

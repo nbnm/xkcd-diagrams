@@ -98,13 +98,30 @@ public enum LayoutEngine {
             if let n = d.nodes[id] {
                 let font = Typography.font(d, for: id)
                 let wordWidth = n.label.split(whereSeparator: { $0.isWhitespace }).map { Typography.width(String($0), font: font) }.max() ?? 0
-                let labelPadding: CGFloat = n.shape.isDocument ? 44 : 40
-                let logoWidth: CGFloat = n.shape == .cylinder && n.asset != nil ? DatabaseContent.minimumLogoWidth : 0
+                let labelPadding: CGFloat = n.shape.isDocument ? DocumentContent.horizontalInset * 2 : 40
+                let logoWidth: CGFloat = n.asset == nil ? 0 : n.shape.isDocument ? DocumentContent.minimumLogoWidth : n.shape == .cylinder ? DatabaseContent.minimumLogoWidth : 0
                 let width = max(CGFloat(n.width ?? n.shape.defaultWidth), wordWidth + labelPadding, logoWidth)
-                let lines = Typography.lines(n.label, font: font, maxWidth: width - labelPadding).count
-                let contentPadding: CGFloat = n.shape == .cylinder ? DatabaseContent.verticalPadding(hasLogo: n.asset != nil) : n.shape.isDocument && n.shape != .file ? 120 + (n.asset == nil ? 0 : 43) : n.asset != nil ? 70 : n.shape == .actor ? 96 : n.shape == .file ? 48 : 32
-                let height = CGFloat(lines) * (CTFontGetAscent(font) + CTFontGetDescent(font) + 5) + contentPadding
-                size = CGSize(width: width, height: max(CGFloat(n.height ?? n.shape.defaultHeight), height))
+                let contentPadding: CGFloat = n.shape.isDocument ? DocumentContent.verticalPadding(n.shape, hasLogo: n.asset != nil) : n.shape == .cylinder ? DatabaseContent.verticalPadding(hasLogo: n.asset != nil) : n.asset != nil ? 70 : n.shape == .actor ? 96 : 32
+                let lineHeight = CTFontGetAscent(font) + CTFontGetDescent(font) + 5
+                func requiredHeight(at width: CGFloat) -> CGFloat {
+                    CGFloat(Typography.lines(n.label, font: font, maxWidth: width - labelPadding).count) * lineHeight + contentPadding
+                }
+                let minimumHeight = CGFloat(n.height ?? n.shape.defaultHeight)
+                if let ratio = n.shape.fixedAspectRatio {
+                    let ratio = CGFloat(ratio)
+                    var lower = max(width, minimumHeight * ratio)
+                    var upper = max(lower, requiredHeight(at: lower) * ratio)
+                    // Reflow at the constrained width to avoid overgrowing a sheet for wrapped labels.
+                    while upper - lower > 0.25 {
+                        let middle = (lower + upper) / 2
+                        if requiredHeight(at: middle) <= middle / ratio { upper = middle }
+                        else { lower = middle }
+                    }
+                    let width = ceil(upper)
+                    size = CGSize(width: width, height: width / ratio)
+                } else {
+                    size = CGSize(width: width, height: max(minimumHeight, requiredHeight(at: width)))
+                }
             } else {
                 let c = d.containers[id]!, padding = CGFloat(c.layout.padding), gap = CGFloat(c.layout.gap)
                 let childSizes = c.children.map(measure)

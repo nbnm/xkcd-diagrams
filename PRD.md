@@ -18,7 +18,7 @@ This PRD defines the proposed first release, its document model, visual behavior
 | Purpose | Minimal enterprise IT system diagrams, tuned to personal definitions | Architecture, integration, deployment, and data flow diagrams |
 | Creation | Drag and drop and agent skill; agents use files and a CLI | Visual editor plus file access, CLI, schema, and project skill |
 | Structure | Boxes and containers that define contents and arrangement | Nested containers with horizontal, vertical, or free placement and optional allowed types |
-| Visual identity | Sketch toggle independent of three color themes | Standard, Blueprint, and Dark colors, each with clean or signature sketch strokes |
+| Visual identity | Sketch toggle independent of five color themes | Standard, Blueprint, Dark, SecondStack, and 8FDE colors, each with clean or signature sketch strokes |
 | Styling | Primarily black or gray; adjustable fonts and line widths | Monochrome defaults, restrained controls, white or transparent export background |
 | Assets | Vendor groups containing Databricks product logos, OpenAI, Anthropic, Azure, and AWS; black and white representations | Searchable expandable groups with monochrome variants, simple generic shapes, and custom SVG or PNG import |
 | Representation | One teachable JSON-like format; Mermaid is a possibility | Strict JSON, published JSON Schema, stable IDs, and explicit layout intent |
@@ -37,7 +37,7 @@ The first release must achieve these outcomes:
 1. Create a useful architecture diagram from a small familiar library in minutes.
 2. Express nested system boundaries and repeatable arrangement rules directly in the document.
 3. Generate a valid diagram with an agent, refine it manually, and export it without conversion loss.
-4. Switch between Standard, Blueprint, and Dark colors and independently toggle Sketch without rebuilding the diagram.
+4. Switch between Standard, Blueprint, Dark, SecondStack, and 8FDE colors and independently toggle Sketch without rebuilding the diagram.
 5. Make the signature style consistent across files, authors, and exports.
 
 ## Users and primary workflows
@@ -197,9 +197,9 @@ First release automatic layout concerns ordered containers. Free root placement 
 
 ## Nodes connectors and labels
 
-Provide a small initial shape set: rectangle, rounded rectangle, cylinder, message queue, a Documents group with File, XLSX, PDF, and DOCX folded sheets, person or actor symbol, and text annotation. Semantic types such as service, application, API, database, queue, and external system are independent of their shape and logo.
+Provide a small initial shape set: rectangle, rounded rectangle, cylinder, message queue, a Documents group with File, XLSX, PDF, and DOCX folded sheets, person or actor symbol, and text annotation. File, XLSX, PDF, and DOCX always use a fixed 4:3 width-to-height ratio, including older saved diagrams. Default document dimensions are 192 × 144 points. Manual width and height are minimums; resize both dimensions together when either minimum or label/logo content requires more space. Keep format details and logos above labels without covering the folded corner or border. Apply the same constraint in the editor, CLI, PNG, and SVG exports, including grid and stack placement. Semantic types such as service, application, API, database, queue, and external system are independent of their shape and logo.
 
-Connectors support plain lines, forward arrows, arrows at both ends, and solid or dashed patterns. All routes must meet their attachment edges at 90 degrees and use right-angle bends. Explicit endpoint sides, automatic sides, and manual waypoints must preserve this rule; waypoint coordinates stay stored as authored while the renderer adds the necessary bends. The legacy `straight` field remains readable for compatibility but renders with right-angle geometry. Arrowheads and labels must remain legible in all six color/stroke combinations.
+Connectors support plain lines, forward arrows, arrows at both ends, and solid or dashed patterns. All routes must meet their attachment edges at 90 degrees and use right-angle bends. Explicit endpoint sides, automatic sides, and manual waypoints must preserve this rule; waypoint coordinates stay stored as authored while the renderer adds the necessary bends. The legacy `straight` field remains readable for compatibility but renders with right-angle geometry. Arrowheads and labels must remain legible in all ten color/stroke combinations.
 
 Endpoints attach to nodes or container boundaries, with automatic or explicitly chosen sides. Moving an endpoint element updates the attachment. Routing should avoid unrelated nodes and labels, permit intentional boundary crossings, and expose manual waypoints when automatic routing is unsatisfactory. Preserve those waypoints in subsequent edits; warn if they create an unresolved collision.
 
@@ -211,7 +211,9 @@ Labels support multiline text, automatic wrapping, and an optional secondary des
 
 ### Independent color and stroke controls
 
-Provide three color themes: Standard, Blueprint, and Dark. A separate Sketch toggle controls pen variation and the default handwriting font for all three themes. App appearance remains a separate local Light/Dark preference. Save color in `theme.preset` and the boolean in `theme.sketch`. New diagrams use Standard with Sketch on. Preserve existing appearance when reading older files: `signature-sketch` becomes Standard with Sketch on; older Standard, Blueprint, and Dark become Sketch off. Preserve custom fonts, line widths, seeds, element ordering, positions, and connector constraints when changing either setting.
+Provide five color themes: Standard, Blueprint, Dark, SecondStack, and 8FDE. A separate Sketch toggle controls pen variation and the default handwriting font for all five themes. App appearance remains a separate local Light/Dark preference. Save color in `theme.preset` and the boolean in `theme.sketch`. New diagrams use Standard with Sketch on. Preserve existing appearance when reading older files: `signature-sketch` becomes Standard with Sketch on; older Standard, Blueprint, and Dark become Sketch off. Preserve custom fonts, line widths, seeds, element ordering, positions, and connector constraints when changing either setting.
+
+The brand themes draw their palettes from [SecondStack](https://secondstack.ai/) and [8FDE](https://8fde.ai/). SecondStack uses near-black paper `#0b0d10`, charcoal node surfaces `#14171b`, off-white ink `#f4f6f8`, and cyan `#2fb5f4` container titles, boundaries, and connectors. 8FDE uses white paper and container backgrounds, `#0c6e85` object outlines and detail lines, dark navy ink `#111827`, and violet `#5d4be8` container titles, boundaries, and connectors. Keep body labels and vendor logos neutral and readable. White marks on light paper have a dark backing; dark paper automatically uses light marks. Both support the independent Sketch toggle, native sans-serif defaults for clean strokes, and matching canvas, PNG, and SVG output. Store their canonical preset names as `secondstack` and `8fde`.
 
 ### Signature Sketch
 
@@ -243,7 +245,7 @@ Preset use creates an editable snapshot in the document. Later profile changes a
 
 Use saturated blue paper (`#0b3d91`) with white boundaries, connectors, labels, and marks. Add a very thin drafting grid with 20-point squares and slightly stronger lines every 100 points, keeping the grid quieter than diagram strokes. Align it to document coordinates so it remains stable while panning and matches PNG and SVG exports. With Sketch off, a monospaced font is the default; Sketch on uses readable handwriting; font family and size remain configurable. Line width changes in the editor apply to the selected node, container boundary, or connector only, including a connector’s arrowheads. Each element can store its own width; omitted widths use the document default. Container stroke widths do not propagate to children. With no selection, hide the width control; provide a reset to the default for an explicit override. Vendor marks render directly in white on blue. Avoid adding decoration that competes with the architecture.
 
-The signature style is accepted through a reference set: one simple integration, one nested deployment, and one denser data flow. Review all six color/stroke combinations at normal presentation size and after image export. The user must judge that the sketch treatment feels recognizable and intentional; a numerical roughness setting alone does not establish success.
+The signature style is accepted through a reference set: one simple integration, one nested deployment, and one denser data flow. Review all ten color/stroke combinations at normal presentation size and after image export. The user must judge that the sketch treatment feels recognizable and intentional; a numerical roughness setting alone does not establish success.
 
 ### Dark theme
 
@@ -318,7 +320,7 @@ Save and export the complete JSON representation with its assets, theme settings
 
 App and CLI exports use the same rendering pipeline and crop rules. Export a whole document in the first release; exporting a selection and PDF can follow later.
 
-Offer an optional T1A logo watermark in the Appearance inspector. Save its enabled state with each document; default it off. Render the official monochrome mark at 40% opacity in a reserved bottom-right footer on the canvas and PNG/SVG exports, with light ink in Blueprint and Dark. Keep it clear of systems, containers, labels, and connectors.
+Offer an optional T1A logo watermark in the Appearance inspector. Save its enabled state with each document; default it off. Render the official monochrome mark at 40% opacity in a reserved bottom-right footer on the canvas and PNG/SVG exports, with light ink in Blueprint, Dark, and SecondStack. Keep it clear of systems, containers, labels, and connectors.
 
 ## Format and implementation decisions
 
@@ -363,7 +365,7 @@ The offline workflow includes creating, opening, validating, editing, and export
 ## Delivery sequence
 
 1. **Product and style definition.** Use the confirmed personal audience, file and CLI workflow, and container arrangement scope. Choose the starter product icons and agree on the reference diagrams, theme rules, and T1A vocabulary.
-2. **Format and renderer spike.** Render the same nested example in all six color/stroke combinations from JSON. Demonstrate seeded strokes, a connection crossing a container boundary, portable text and logos, and headless export. Select the implementation stack from these results.
+2. **Format and renderer spike.** Render the same nested example in all ten color/stroke combinations from JSON. Demonstrate seeded strokes, a connection crossing a container boundary, portable text and logos, and headless export. Select the implementation stack from these results.
 3. **Complete editing workflow.** Build local file handling, manual composition, containers, connectors, inspection, undo, source validation, and image export.
 4. **Agent workflow.** Ship CLI commands, schema, example documents, and the project skill. Verify a complete agent to app to agent handoff and external edit handling.
 5. **Personal pilot.** Produce real architecture diagrams, measure the proposed targets, and refine the style and library. Broader distribution, MCP, and full graph layout follow only if they serve the pilot's needs.
@@ -391,3 +393,7 @@ Remaining product details:
 4. What minimum macOS version and hardware must be supported on the user's machines?
 
 The confirmed scope is sufficient to start a format and renderer prototype. Use a provisional readable handwriting font and generic symbols until the reference style and exact product icon subset are selected.
+
+### T1A platform and AI Agent presets
+
+Add an expandable T1A group under Platforms with editable logo boxes for SecondStack, LakeSentry, 8FDE, Antares, and T1A. Freeze the official source vector geometry into each diagram, supporting black/white marks and every color/Sketch combination. Add AI Agent under Shapes as an editable rounded box with a simple robot icon and semantic `type: agent`. Expose stable CLI library IDs `secondstack`, `lakesentry`, `8fde`, `antares`, `t1a`, and `ai-agent`. Dragging or clicking these presets uses existing containment, selection, text sizing, and connector behavior.

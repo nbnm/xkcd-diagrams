@@ -12,9 +12,12 @@ public struct Drawing {
     public var dashed: Bool
     public var evenOdd: Bool = false
     public var opacity: CGFloat
-    public init(_ path: CGPath, stroke: CGFloat? = nil, fill: CGFloat? = nil, width: CGFloat = 1, dashed: Bool = false, evenOdd: Bool = false, opacity: CGFloat = 1) {
+    public var strokeRole: PaintRole
+    public var fillRole: PaintRole
+    public init(_ path: CGPath, stroke: CGFloat? = nil, fill: CGFloat? = nil, width: CGFloat = 1, dashed: Bool = false, evenOdd: Bool = false, opacity: CGFloat = 1, strokeRole: PaintRole = .neutral, fillRole: PaintRole = .neutral) {
         self.path = path; self.stroke = stroke; self.fill = fill; self.width = width; self.dashed = dashed; self.evenOdd = evenOdd
         self.opacity = opacity
+        self.strokeRole = strokeRole; self.fillRole = fillRole
     }
 }
 
@@ -33,8 +36,8 @@ public struct RenderScene {
             context.addPath(item.path)
             context.setLineWidth(item.width); context.setLineCap(.round); context.setLineJoin(.round)
             if item.dashed { context.setLineDash(phase: 0, lengths: [7, 5]) }
-            if let fill = item.fill { context.setFillColor(palette.color(fill)) }
-            if let stroke = item.stroke { context.setStrokeColor(palette.color(stroke)) }
+            if let fill = item.fill { context.setFillColor(palette.color(fill, role: item.fillRole)) }
+            if let stroke = item.stroke { context.setStrokeColor(palette.color(stroke, role: item.strokeRole)) }
             if palette.blueprint && (item.fill ?? 0) >= 0.99 {
                 // Repaint the same paper through filled objects, hiding underlying connectors while keeping the grid continuous.
                 context.saveGState(); context.clip(using: item.evenOdd ? .evenOdd : .winding)
@@ -77,17 +80,17 @@ public enum Renderer {
         for id in layout.order where document.containers[id] != nil && id != document.root {
             let rect = layout.frames[id]!
             let width = CGFloat(document.strokeWidth(for: id))
-            drawings.append(Drawing(outline(corners(rect), id: id, closed: true), stroke: 0.46, fill: 1, width: width, dashed: true))
+            drawings.append(Drawing(outline(corners(rect), id: id, closed: true), stroke: 0.46, fill: 1, width: width, dashed: true, strokeRole: .accent, fillRole: .container))
         }
         for id in document.connectors.keys.sorted() {
             let edge = document.connectors[id]!, points = layout.routes[id]!
             let width = CGFloat(document.strokeWidth(for: id))
-            drawings.append(Drawing(outline(points, id: id, connector: true), stroke: 0.32, width: width, dashed: edge.dashed))
+            drawings.append(Drawing(outline(points, id: id, connector: true), stroke: 0.32, width: width, dashed: edge.dashed, strokeRole: .accent))
             func arrow(_ end: CGPoint, before: CGPoint, suffix: String) {
                 let angle = atan2(end.y - before.y, end.x - before.x), length: CGFloat = 10
                 let a = CGPoint(x: end.x - length * cos(angle - 0.42), y: end.y - length * sin(angle - 0.42))
                 let b = CGPoint(x: end.x - length * cos(angle + 0.42), y: end.y - length * sin(angle + 0.42))
-                drawings.append(Drawing(outline([a, end, b], id: id + suffix), stroke: 0.32, width: width))
+                drawings.append(Drawing(outline([a, end, b], id: id + suffix), stroke: 0.32, width: width, strokeRole: .accent))
             }
             let distinct = points.enumerated().filter { $0.offset == 0 || points[$0.offset - 1] != $0.element }.map(\.element)
             if distinct.count > 1 && edge.direction != .none { arrow(distinct.last!, before: distinct[distinct.count - 2], suffix: "-arrow") }
@@ -105,31 +108,30 @@ public enum Renderer {
             case .file, .xlsx, .pdf, .docx:
                 // Both the renderer and the library preview use the folded sheet geometry.
                 path = polygon(geometry[0], id: id)
-                drawings.append(Drawing(path, stroke: 0.14, fill: 1, width: width))
-                drawings.append(Drawing(penStroke(geometry[1], id: id + "-fold"), stroke: 0.14, width: width))
+                drawings.append(Drawing(path, stroke: 0.14, fill: 1, width: width, strokeRole: .outline, fillRole: .surface))
+                drawings.append(Drawing(penStroke(geometry[1], id: id + "-fold"), stroke: 0.14, width: width, strokeRole: .outline))
                 for (index, detail) in geometry.enumerated() where index >= 2 {
                     drawings.append(SymbolGeometry.isFilledDetail(node.shape, index: index)
                         ? Drawing(detail, fill: 0.14)
-                        : Drawing(penStroke(detail, id: id + "-detail-\(index)"), stroke: 0.14, width: width))
+                        : Drawing(penStroke(detail, id: id + "-detail-\(index)"), stroke: 0.14, width: width, strokeRole: .outline))
                 }
             case .cylinder:
                 path = penStroke(geometry[0], id: id)
-                drawings.append(Drawing(path, stroke: 0.14, fill: 1, width: width))
-                drawings.append(Drawing(penStroke(geometry[1], id: id + "-lip"), stroke: 0.14, width: width))
+                drawings.append(Drawing(path, stroke: 0.14, fill: 1, width: width, strokeRole: .outline, fillRole: .surface))
+                drawings.append(Drawing(penStroke(geometry[1], id: id + "-lip"), stroke: 0.14, width: width, strokeRole: .outline))
             case .queue:
                 for (index, layer) in geometry.enumerated() {
-                    drawings.append(Drawing(outline(corners(layer.boundingBoxOfPath), id: id + "-layer-\(index)", closed: true), stroke: 0.14, fill: 1, width: width))
+                    drawings.append(Drawing(outline(corners(layer.boundingBoxOfPath), id: id + "-layer-\(index)", closed: true), stroke: 0.14, fill: 1, width: width, strokeRole: .outline, fillRole: .surface))
                 }
                 path = geometry.last!
             case .text: path = CGMutablePath()
             case .actor: path = penStroke(geometry[0], id: id)
             case .rectangle: path = outline(corners(r), id: id, closed: true)
             }
-            if node.shape != .cylinder && node.shape != .queue && !node.shape.isDocument && node.shape != .text { drawings.append(Drawing(path, stroke: 0.14, fill: node.shape == .actor ? nil : 1, width: width)) }
+            if node.shape != .cylinder && node.shape != .queue && !node.shape.isDocument && node.shape != .text { drawings.append(Drawing(path, stroke: 0.14, fill: node.shape == .actor ? nil : 1, width: width, strokeRole: .outline, fillRole: .surface)) }
             var labelRect = (node.shape == .queue ? geometry.last!.boundingBoxOfPath : r).insetBy(dx: 18, dy: 12)
             if node.shape == .cylinder { labelRect = DatabaseContent.labelRect(in: r, hasLogo: node.asset != nil) }
-            else if node.shape == .file { labelRect = r.insetBy(dx: 22, dy: 12); labelRect.origin.y += 12; labelRect.size.height -= 12 }
-            else if node.shape.isDocument { labelRect = CGRect(x: r.minX + 22, y: r.minY + 108, width: r.width - 44, height: r.height - 120) }
+            else if node.shape.isDocument { labelRect = DocumentContent.labelRect(node.shape, in: r, hasLogo: node.asset != nil) }
             if let assetID = node.asset, let asset = document.assets[assetID] {
                 let logoY: CGFloat = node.shape.isDocument && node.shape != .file ? 102 : 14
                 let target = node.shape == .cylinder ? DatabaseContent.logoRect(in: r)
@@ -145,7 +147,7 @@ public enum Renderer {
                     let p = try SVGPath.parse(data).copy(using: &transform)!
                     drawings.append(asset.rendering == .outline ? Drawing(p, stroke: ink, width: max(0.65, width * 0.65)) : Drawing(p, fill: ink, evenOdd: true))
                 }
-                if node.shape != .cylinder { labelRect.origin.y += 43; labelRect.size.height -= 43 }
+                if node.shape != .cylinder && !node.shape.isDocument { labelRect.origin.y += 43; labelRect.size.height -= 43 }
             } else if node.shape == .actor { labelRect.origin.y += 68; labelRect.size.height -= 68 }
             drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id)), fill: 0.12))
         }
@@ -154,7 +156,7 @@ public enum Renderer {
             let container = document.containers[id]!
             let height = container.fontSize == nil ? 26 : Typography.containerHeaderHeight(container, theme: document.theme) - 22
             let textRect = CGRect(x: r.minX + 20, y: r.minY + 11, width: r.width - 40, height: height)
-            drawings.append(Drawing(Typography.paths(label, in: textRect, font: Typography.font(document, for: id), centered: false), fill: 0.36))
+            drawings.append(Drawing(Typography.paths(label, in: textRect, font: Typography.font(document, for: id), centered: false), fill: 0.36, fillRole: .accent))
         }
         for id in document.connectors.keys.sorted() {
             if let label = document.connectors[id]!.label, let rect = layout.labelFrames[id] {
@@ -179,15 +181,14 @@ public enum Renderer {
 
     public static func svg(_ document: Diagram, transparent: Bool = false) throws -> Data {
         let scene = try scene(document), b = scene.layout.bounds
-        func gray(_ value: CGFloat) -> String { scene.palette.hex(value) }
         var lines = ["<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"\(format(b.width))\" height=\"\(format(b.height))\" viewBox=\"\(format(b.minX)) \(format(b.minY)) \(format(b.width)) \(format(b.height))\" role=\"img\">",
                      "<title>\(xmlEscape(document.title))</title>"]
         if scene.palette.blueprint { lines.append(BlueprintGrid.svgDefinitions(background: scene.palette.backgroundHex)) }
         if !transparent { lines.append("<rect x=\"\(format(b.minX))\" y=\"\(format(b.minY))\" width=\"\(format(b.width))\" height=\"\(format(b.height))\" fill=\"\(scene.palette.blueprint ? "url(#blueprint-paper)" : scene.palette.backgroundHex)\"/>") }
         for item in scene.drawings {
-            let fill = scene.palette.blueprint && (item.fill ?? 0) >= 0.99 ? "url(#blueprint-paper)" : item.fill.map(gray) ?? "none"
+            let fill = scene.palette.blueprint && (item.fill ?? 0) >= 0.99 ? "url(#blueprint-paper)" : item.fill.map { scene.palette.hex($0, role: item.fillRole) } ?? "none"
             var attributes = "d=\"\(item.path.svgData)\" fill=\"\(fill)\""
-            if let stroke = item.stroke { attributes += " stroke=\"\(gray(stroke))\" stroke-width=\"\(format(item.width))\" stroke-linecap=\"round\" stroke-linejoin=\"round\"" }
+            if let stroke = item.stroke { attributes += " stroke=\"\(scene.palette.hex(stroke, role: item.strokeRole))\" stroke-width=\"\(format(item.width))\" stroke-linecap=\"round\" stroke-linejoin=\"round\"" }
             if item.dashed { attributes += " stroke-dasharray=\"7 5\"" }
             if item.evenOdd { attributes += " fill-rule=\"evenodd\"" }
             if item.opacity < 1 { attributes += " opacity=\"\(format(item.opacity))\"" }
