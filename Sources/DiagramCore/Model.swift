@@ -6,9 +6,9 @@ public enum Shape: String, Codable, CaseIterable {
     public var isDocument: Bool {
         switch self { case .file, .xlsx, .pdf, .docx: return true; default: return false }
     }
-    public var fixedAspectRatio: Double? { isDocument ? 4.0 / 3.0 : nil }
-    public var defaultWidth: Double { isDocument ? 192 : 170 }
-    public var defaultHeight: Double { isDocument ? 144 : 76 }
+    public var fixedAspectRatio: Double? { isDocument ? 3.0 / 4.0 : nil }
+    public var defaultWidth: Double { isDocument ? 144 : self == .actor ? 74 : 170 }
+    public var defaultHeight: Double { isDocument ? 192 : self == .actor ? 100 : 76 }
     public var title: String {
         switch self {
         case .rectangle: return "Box"
@@ -19,7 +19,7 @@ public enum Shape: String, Codable, CaseIterable {
         case .xlsx: return "XLSX"
         case .pdf: return "PDF"
         case .docx: return "DOCX"
-        case .actor: return "Person"
+        case .actor: return "User"
         case .text: return "Text"
         }
     }

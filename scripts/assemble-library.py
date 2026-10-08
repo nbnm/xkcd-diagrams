@@ -16,7 +16,7 @@ previous = json.loads(destination.read_text())
 platforms = [item for item in previous if item["group"] == "T1A"]
 items = [item for item in previous if item["id"] in ["service", "database", "queue", "file", "xlsx", "pdf", "docx", "actor", "text", "ai-agent"]]
 for item in items:
-    item["title"] = {"service": "System", "database": "Database", "queue": "Queue", "file": "File", "xlsx": "XLSX", "pdf": "PDF", "docx": "DOCX", "actor": "Person", "text": "Text", "ai-agent": "AI Agent"}[item["id"]]
+    item["title"] = {"service": "System", "database": "Database", "queue": "Queue", "file": "File", "xlsx": "XLSX", "pdf": "PDF", "docx": "DOCX", "actor": "User", "text": "Text", "ai-agent": "AI Agent"}[item["id"]]
     if item["id"] == "queue": item["shape"] = "queue"
     if item["id"] in ["file", "xlsx", "pdf", "docx"]: item["group"] = "Documents"
 
@@ -162,6 +162,7 @@ def product_asset(filename, name, source, outline=False, unity_symbol=False):
 add("unity-catalog", "Unity Catalog", product_asset("unity-catalog.svg", "Unity Catalog", "https://www.databricks.com/sites/default/files/2024-12/logo-color-unity-catalog.svg", unity_symbol=True), "hexagon", group="Databricks")
 add("delta-lake", "Delta Lake", product_asset("delta-lake.svg", "Delta Lake", "https://www.databricks.com/sites/default/files/2023-03/icon-orange_delta-lake.svg"), "triangle", group="Databricks", shape="cylinder", kind="database")
 add("databricks-lakehouse", "Lakehouse", next(i["asset"] for i in items if i["id"] == "databricks"), "cylinder", group="Databricks", shape="cylinder", kind="database")
+add("genie-agent", "Genie Agent", product_asset("genie-agent.svg", "Genie Agent", "https://www.databricks.com/sites/default/files/2026-05/icon-genie.svg"), "sparkles", group="Databricks", shape="roundedRectangle", kind="agent")
 for ident, title, filename, shape, kind in [
     ("azure-data-lake", "Data Lake Storage", "azure-data-lake.svg", "cylinder", "database"),
     ("azure-vm", "Virtual Machine", "azure-vm.svg", "rectangle", "service"),

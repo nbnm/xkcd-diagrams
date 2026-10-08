@@ -77,15 +77,7 @@ public enum DiagramEditing {
         }
         try setLayout(.free, container: next.root, document: &next)
         let layout = try LayoutEngine.layout(next), root = next.containers[next.root]!
-        let origin = CGPoint(x: root.layout.padding, y: root.layout.padding)
-        // Normalize root positions to the current frames, including files with negative positions.
-        // This prevents moving the leftmost item from shifting all its siblings.
-        for child in root.children {
-            let frame = layout.frames[child]!
-            let point = Point(x: frame.minX - origin.x, y: frame.minY - origin.y)
-            if next.nodes[child] != nil { next.nodes[child]?.position = point }
-            else { next.containers[child]?.position = point }
-        }
+        let origin = layout.contentOrigins[next.root]!
         let siblings = root.children.filter { $0 != id }.reduce(CGRect.null) { $0.union(layout.frames[$1]!) }
         let position = siblings.isNull ? Point() : Point(x: siblings.minX - origin.x, y: siblings.maxY + max(48, root.layout.gap) - origin.y)
         let width = max(next.containers[id]?.width ?? 0, siblings.isNull ? 640 : siblings.width)
@@ -147,8 +139,7 @@ public enum DiagramEditing {
         guard let container = document.containers[id], mode != container.layout.mode else { return }
         var next = document
         if mode == .free {
-            let layout = try LayoutEngine.layout(document), rect = layout.frames[id]!
-            let origin = CGPoint(x: rect.minX + container.layout.padding, y: rect.minY + container.layout.padding + (id == document.root ? 0 : 36))
+            let layout = try LayoutEngine.layout(document), origin = layout.contentOrigins[id]!
             for child in container.children {
                 let frame = layout.frames[child]!, point = Point(x: frame.minX - origin.x, y: frame.minY - origin.y)
                 if next.nodes[child] != nil { next.nodes[child]?.position = point }

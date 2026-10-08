@@ -1,6 +1,18 @@
 import Foundation
 import CoreGraphics
 
+/// Compact margins retain the comic figure while bringing its connection edges closer.
+enum UserContent {
+    static let horizontalInset: CGFloat = 6
+    static let topInset: CGFloat = 74
+    static let bottomInset: CGFloat = 4
+    static var verticalPadding: CGFloat { topInset + bottomInset }
+    static func labelRect(in frame: CGRect) -> CGRect {
+        CGRect(x: frame.minX + horizontalInset, y: frame.minY + topInset,
+               width: frame.width - horizontalInset * 2, height: frame.height - verticalPadding)
+    }
+}
+
 /// Folded sheets keep space for their format details and optional logo above the label.
 enum DocumentContent {
     static let horizontalInset: CGFloat = 22
@@ -99,7 +111,7 @@ public enum SymbolGeometry {
             lip.addCurve(to: CGPoint(x: r.maxX, y: r.minY + h), control1: CGPoint(x: r.minX, y: r.minY + h * 2.4), control2: CGPoint(x: r.maxX, y: r.minY + h * 2.4))
             return [body, lip]
         case .actor:
-            let p = CGMutablePath(), cx = r.midX, y = r.minY
+            let p = CGMutablePath(), cx = r.midX, y = r.minY - 7.5
             // A blank, slightly irregular head and a relaxed pose give the person a comic character.
             p.move(to: CGPoint(x: cx - 10.8, y: y + 21.5))
             p.addCurve(to: CGPoint(x: cx - 0.8, y: y + 10.5), control1: CGPoint(x: cx - 11.6, y: y + 15.5), control2: CGPoint(x: cx - 7, y: y + 10))

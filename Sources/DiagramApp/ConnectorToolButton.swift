@@ -11,7 +11,10 @@ struct ConnectorToolButton: NSViewRepresentable {
         view.store = store
         view.label.rootView = AnyView(HStack(spacing: toolbar ? 6 : 10) {
             Image(systemName: "arrow.turn.down.right").font(.system(size: toolbar ? 16 : 18)).frame(width: toolbar ? 20 : 28)
-            Text("Connector").font(.system(size: toolbar ? 13 : 12, weight: toolbar ? .regular : .semibold))
+            HStack(spacing: 6) {
+                Text("Connector").font(.system(size: toolbar ? 13 : 12, weight: toolbar ? .regular : .semibold))
+                Text("E").font(.system(size: 10).monospaced()).foregroundStyle(.secondary)
+            }
             if !toolbar { Spacer() }
         }.foregroundStyle(store.connecting ? Color.accentColor : .primary)
             .padding(.horizontal, toolbar ? 4 : 7)
@@ -42,7 +45,7 @@ struct ConnectorToolButton: NSViewRepresentable {
             label.topAnchor.constraint(equalTo: topAnchor), label.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
         setAccessibilityElement(true); setAccessibilityRole(.button); setAccessibilityLabel("Connector")
-        toolTip = "Drag Connector onto a source, then click or drag to its destination (⌘K)"
+        toolTip = "Connector — E (or ⌘K). Click to select, or drag onto a source, then click or drag to its destination. Esc cancels."
         setAccessibilityHelp(toolTip)
     }
     required init?(coder: NSCoder) { fatalError() }

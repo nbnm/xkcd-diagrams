@@ -1,107 +1,173 @@
 # XKCD Diagrams
 
-A native macOS diagram editor and CLI sharing one JSON document model, layout engine, and deterministic vector renderer. This is the first runnable implementation of [the PRD](PRD.md), targeting macOS 14 or later. It currently builds for the local machine's architecture.
+A native macOS app for enterprise and IT architecture diagrams, built around T1A conventions. Draw manually with drag and drop, or let an agent create the same editable JSON document through the CLI.
 
-## Build and run
+![XKCD Diagrams editor showing a sketch-style T1A data platform diagram](docs/screenshots/editor-sketch.jpg)
 
-Install Apple's command-line developer tools if needed. No third-party packages or network downloads are required to build.
+## Features
 
-```sh
-./scripts/build-app.sh
-open "dist/XKCD Diagrams.app"
-```
-
-The build creates the app and `dist/diagram`. The bundle is signed locally for development; it is not a notarized distribution build. `./scripts/build-app.sh debug` creates a faster debug build.
+- Containers with horizontal, vertical, free, and custom grid layouts, including spanning rows and columns.
+- A borderless canvas, orthogonal connectors, zoom and pan, and tabs with separate editing histories.
+- Five diagram color themes: Standard, Blueprint, Dark, SecondStack, and 8FDE. Each supports an independent Sketch toggle.
+- A grouped logo library for T1A, Databricks, Azure, AWS, OpenAI, and Anthropic, including black and white marks.
+- System, database, queue, AI Agent, User, and text shapes, plus File, XLSX, PDF, and DOCX document presets.
+- Per-item line widths and text sizes, keyboard shortcuts, copy/paste, and quick label editing.
+- Editable `.diagram.json` documents and PNG/SVG exports, with an optional T1A watermark.
+- A CLI and bundled agent skill sharing the editor's document model, layout engine, and renderer.
 
 ## Installation
 
-### macOS app
+### Requirements
 
-Requires macOS 14 or later. To build from source, install Apple's command-line developer tools with `xcode-select --install` if they are not already installed, then run `./scripts/build-app.sh` from this repository's root.
+- macOS 14 or later.
+- Swift 6.0 or later, provided by Xcode 16 or later or compatible Apple Command Line Tools.
+- Git to clone the repository. There are no third-party package dependencies.
 
-Quit an existing installed copy before replacing it. Install the built app for your user account:
+Install Apple's developer tools if needed, then check your Swift version:
 
 ```sh
+xcode-select --install
+swift --version
+```
+
+Skip `xcode-select --install` if the tools are already installed. If your selected tools provide Swift 5, install a newer compatible toolchain before building.
+
+### Build and install the macOS app
+
+```sh
+git clone https://github.com/nbnm/xkcd-diagrams.git
+cd xkcd-diagrams
+./scripts/build-app.sh release
+
 mkdir -p "$HOME/Applications"
 ditto "dist/XKCD Diagrams.app" "$HOME/Applications/XKCD Diagrams.app"
 open "$HOME/Applications/XKCD Diagrams.app"
 ```
 
-Keep the repository's `dist/` directory in place for agent access to the CLI. `dist/diagram` uses the accompanying `XKCDDiagrams_DiagramCore.bundle` for its schema and symbol library; preserve both when moving the CLI to another directory.
+The build produces `dist/XKCD Diagrams.app`, `dist/diagram`, and its resource bundle. It targets the local machine's architecture. The app is locally signed for development; it is not a notarized distribution build.
+
+For development, run the app directly from `dist/` after building. `./scripts/build-app.sh debug` creates a debug build.
+
+To update, quit every running copy before rebuilding or replacing an app bundle. From your checkout, run `git pull --ff-only`, rebuild, then repeat the `ditto` and `open` commands above.
+
+### Use the CLI
+
+Run the CLI directly from the checkout:
+
+```sh
+dist/diagram help
+```
+
+To make it available in your current shell:
+
+```sh
+export PATH="$PWD/dist:$PATH"
+diagram help
+```
+
+Keep `diagram` and `XKCDDiagrams_DiagramCore.bundle` together if you move the CLI. The bundle contains the schema and symbol library. The macOS app does not need to be running for CLI commands.
 
 ### Codex skill
 
-Build the CLI first, then copy the complete skill folder into your Codex user skills directory. Run these commands from the repository root; repeat the copy command to update an installed copy:
+The complete skill is in [skills/xkcd-diagrams](skills/xkcd-diagrams/SKILL.md). Codex's [official skills documentation](https://learn.chatgpt.com/docs/build-skills) lists `~/.agents/skills` for user skills. Build the CLI first, then run these commands from the repository root:
 
 ```sh
-diagram_skill_root="${CODEX_HOME:-$HOME/.codex}/skills"
+diagram_skill_root="$HOME/.agents/skills"
 mkdir -p "$diagram_skill_root"
 ditto "skills/xkcd-diagrams" "$diagram_skill_root/xkcd-diagrams"
 XKCD_DIAGRAM_CLI="$PWD/dist/diagram" \
   "$diagram_skill_root/xkcd-diagrams/scripts/diagram.sh" help
 ```
 
-The helper defaults to `/Volumes/Work/xkcd-diagrams/dist/diagram`. For another checkout location, set `XKCD_DIAGRAM_CLI` to the absolute executable path in the environment used to launch Codex. For example, start the Codex CLI from this repository with:
+The helper must know the absolute path to your built CLI. For the Codex CLI, set it in the launch environment:
 
 ```sh
 XKCD_DIAGRAM_CLI="$PWD/dist/diagram" codex
 ```
 
-For the desktop app, which may not inherit your shell environment, edit the fallback path in the installed `scripts/diagram.sh` instead. Keep the assignment's `${XKCD_DIAGRAM_CLI:-...}` form and replace only the path after `:-`. Reapply that local path after copying a skill update.
+For the Codex desktop app, configure the fallback path in the installed `scripts/diagram.sh` to your checkout's absolute `dist/diagram` path. Preserve the `${XKCD_DIAGRAM_CLI:-...}` syntax and replace only the path after `:-`. The bundled fallback matches the original development checkout; other machines need this configuration. Repeat the copy command to update the installed skill, then reapply your local fallback path.
 
-The skill enables automatic invocation for diagram requests and can also be invoked explicitly as `$xkcd-diagrams`. It creates editable JSON diagrams and image previews using the app's CLI. Start a new message after installation; if the skill is not listed, restart Codex. Other agents can use the same complete skill folder in their supported skills directory, with the CLI path configured for that machine.
+Start a new message after installation; if the skill is not listed, restart Codex. Invoke it explicitly as `$xkcd-diagrams`, or use it for a diagram request. Other agents can use the skill in their supported skills directory with the CLI path configured for their machine.
 
-## Editor
+## Getting started
 
-The app opens a T1A data platform example. Use File → New Diagram for a blank canvas. Drag shapes and vendor symbols from the library into the canvas or a boundary, or click a library entry to add it. Container is the first library item and a labeled toolbar action. Its inspector controls horizontal, vertical, or free arrangement; individual systems have no arrangement controls. Drag within a stack to reorder it, or into another container to change ownership. Type rules block invalid drops.
+The first launch opens a T1A data platform example. Use **⌘N** or **⌘T** for a blank diagram. Choose an item in the toolbox, drag it onto the canvas, or press its shortcut and click to place it.
 
-Set **Canvas placement → Custom rows and columns** to define a grid with 1–32 rows and columns. Select an item and use Row, Column, Row span, and Column span to assign its cell. Drag between cells to move items; single-cell items swap when dropped onto one another. Containers stretch across their assigned spans while arranging their own contents. Unassigned items fill available cells in child order; adding items or increasing spans adds rows when needed. Grid changes reroute connectors. Add Container Below Diagram keeps a custom grid and creates a new full-width row below the other items. Faint cell guides appear only in the editor; PNG and SVG exports contain the diagram.
+| Action | Shortcut |
+| --- | --- |
+| Place Container | X |
+| Select Connector | E or ⌘K |
+| System / Database / Queue | S / D / Q |
+| AI Agent / User / Text | A / U / T |
+| File / XLSX / PDF / DOCX | F / L / P / W |
+| New tab / Close tab | ⌘T / ⌘W |
+| Open / Save | ⌘O / ⌘S |
+| Copy / Paste | ⌘C / ⌘V |
+| Undo / Redo | ⌘Z / ⇧⌘Z |
+| Zoom in / Zoom out / Fit | ⌘= / ⌘− / ⌘0 |
+| Cancel a tool or leave a text field | Escape |
 
-Set **Canvas placement → Free placement** in the inspector to mix top-level rows and columns while each container keeps its own arrangement. Switching from a row or column preserves current positions. Use **Container menu → Add Container Below Diagram** for a wide horizontal container under the whole diagram, or select an existing top-level container and choose **Place below diagram**. Container Width and Height set minimum dimensions; **Fit to contents** restores automatic sizing. Drag top-level items freely; connectors follow their new positions. These settings persist in JSON and image exports.
+Single-key tools work outside text fields. Every toolbox item has a hover tooltip; platform groups use a number followed by the item's key. Double-click an item to edit its name. Select a container to arrange its contents, or select the canvas to set top-level placement. Select an item before changing its line width or text size.
 
-Choose **Connector** in the toolbox or toolbar (⌘K), then drag from the source to the destination, or click each in turn. You can also drag the Connector toolbox item onto a source, then click a destination or drag from that source to it. Dropping the tool on empty canvas activates it so you can choose a source. A live right-angle preview highlights the destination; releasing on empty canvas or the source creates no connection and keeps the source ready for another attempt. Both systems and container boundaries can be connected; Escape on the canvas cancels. Connecting leaves item positions unchanged and creates one undoable edit. Every connector meets its source and destination edge at a right angle, with a short perpendicular approach before any bend. Click a connection or its label to edit arrows, endpoint sides, line pattern, and manual path points; manual points gain right-angle bends between them. Older `straight` routes also use this geometry. Changing a container to a horizontal or vertical stack resets affected connector sides and manual bends so connections follow the new arrangement; unrelated connections retain their settings. Select a system to edit its label, shape, width, and logo from a vendor-grouped picker. The Documents group contains File, XLSX, PDF, and DOCX. They keep a fixed 4:3 width-to-height ratio with folded corners, persistent format marks, and editable labels. Width changes and text or logo growth resize both dimensions together; the spreadsheet grid and document lines match their library previews. Queue uses a stack of message outlines, and library thumbnails use the same geometry as the canvas. Database labels and logos sit below the curved lid, with space above the lower outline; cylinders expand to fit wrapped text without covering their border.
+Container and Connector live in the toolbox. The top toolbar controls diagram colors, sketch strokes, zoom, source editing, saving, and exporting. The full saved file path appears in the bottom status bar; click it to reveal the file in Finder. Saved files autosave later edits, and saved tabs reopen on the next launch.
 
-Use **App appearance → Light / Dark** at the bottom of the library to choose the interface appearance. This preference is remembered across launches and applies to every diagram. It does not change the document, image exports, or undo history. The toolbar’s **Color theme** control selects Standard, Blueprint, Dark, SecondStack, or 8FDE. A separate **Sketch** toggle works with all five colors; both settings are saved in the diagram and used by image exports.
+See the [editor guide](docs/EDITOR.md) for layouts, grid spans, connectors, all platform shortcuts, tabs, themes, and file behavior.
 
-All five color themes support clean or sketch strokes. Sketch uses restrained, seeded pen variation on shape outlines, curved symbols, container boundaries, document details, and connectors. Connector bends and attachments retain straight sections and 90-degree angles. Turn Sketch off for precise outlines. Vendor marks stay undistorted in every combination. With **Style default**, Sketch uses Chalkboard SE; clean Standard, Dark, SecondStack, and 8FDE use Helvetica, and clean Blueprint uses Menlo. A custom Font choice applies to every combination and survives toggling Sketch. Dark uses charcoal paper (`#181818`) with light gray ink and logos. Blueprint uses saturated blue paper (`#0b3d91`), white ink and marks, and a thin drafting grid of 20-point squares with slightly stronger lines every 100 points. Its placement matches in the canvas, PNG, and SVG. Typography remains adjustable. With an item selected, **Selected text → Text size** changes only that shape’s label, container title, or connector label. **Use default text size** removes its override. Container title sizes do not propagate to children. With nothing selected, **Default text size** sets the document default for system labels; container and connector defaults stay at 14 and 12 points. Large labels expand their shapes, headers, or label backgrounds to stay readable, and connectors follow the resulting geometry. Select a shape, container, or connector to adjust its line width in its own inspector section; this affects that item alone. Use default removes its custom width. The width control is unavailable without a selection; existing diagrams retain their saved default width. The app name follows this project's folder name, and the app icon shows a stick-figure draftsman drawing a blueprint. That character is a provisional interpretation of Ubino.
+## Diagram styles
 
-The two brand themes take their palette from [SecondStack](https://secondstack.ai/) and [8FDE](https://8fde.ai/). **SecondStack** uses near-black paper (`#0b0d10`), charcoal system surfaces (`#14171b`), off-white text (`#f4f6f8`), and cyan (`#2fb5f4`) container titles, boundaries, and connectors. **8FDE** uses white paper and container backgrounds, `#0c6e85` object outlines and detail lines, dark navy text (`#111827`), and violet (`#5d4be8`) container titles, boundaries, and connectors. Body labels and vendor marks remain neutral; white marks on light paper retain a dark backing. Choose either in the Color theme menu, and use Sketch independently. The same palette is used in the canvas, PNG, and SVG. Agents select `theme.preset: "secondstack"` or `"8fde"`; custom fonts and per-item widths and text sizes are preserved.
+Blueprint uses blue drafting paper, a thin grid, and white ink. This screenshot has Sketch turned off:
 
-Use the toolbar Zoom In and Zoom Out buttons or ⌘= and ⌘− to change the canvas scale by a factor of 1.25, from 20% to 300%. The toolbar shows the current percentage; zoom buttons stop at the limits. Button zoom stays centered on the viewport. Pinch or Command-scroll zooms around the pointer. Drag empty canvas or Option-drag to pan, and use ⌘0 to fit. Zoom changes only the view, leaving document geometry, exports, and undo history intact. Undo and redo support document edits. Deleting connected elements shows a confirmation sheet attached to the editor; the deletion and attached connectors can be restored together with Undo. Open or save JSON through File; saved documents autosave subsequent changes. External edits reload when the app is clean, or surface a conflict when local changes exist. JSON source editing validates before applying. Export SVG or PNG from the toolbar.
+![Blueprint diagram with a thin grid and clean white outlines](docs/screenshots/editor-blueprint.jpg)
 
-Enable **T1A watermark** in the Diagram appearance inspector to place the official logo in a reserved bottom-right footer on the canvas and PNG/SVG exports. The setting is saved per diagram and uses light ink in Blueprint, Dark, and SecondStack.
+The app's Light/Dark interface setting is separate from the diagram color theme. Here, the dark interface surrounds a SecondStack diagram with Sketch enabled:
 
-Older diagrams retain their appearance: `signature-sketch` opens as Standard with Sketch on; legacy Standard, Blueprint, and Dark open with Sketch off. Saving writes the color as `theme.preset` and the independent boolean as `theme.sketch`. New diagrams default to Standard with Sketch on.
+![Dark app interface with a SecondStack diagram using cyan connectors and sketch outlines](docs/screenshots/editor-secondstack.jpg)
+
+All five color themes work with clean or sketch strokes. Logos remain undistorted. Theme and stroke settings are saved in the diagram and used by PNG/SVG exports.
 
 ## Agent and CLI workflow
 
+Create, validate, and render an example without opening the editor:
+
 ```sh
-dist/diagram init Examples/new.diagram.json --example
-dist/diagram validate Examples/new.diagram.json --json
-dist/diagram render Examples/new.diagram.json --format svg --output /tmp/diagram.svg
-dist/diagram render Examples/new.diagram.json --format png --output /tmp/diagram.png --scale 2
+mkdir -p diagrams
+dist/diagram init diagrams/example.diagram.json --example
+dist/diagram validate diagrams/example.diagram.json --json
+dist/diagram render diagrams/example.diagram.json --format png --output diagrams/example.png --scale 2
+dist/diagram render diagrams/example.diagram.json --format svg --output diagrams/example.svg
+```
+
+Inspect the supported schema and bundled presets before authoring JSON:
+
+```sh
 dist/diagram schema
 dist/diagram library list
 ```
 
-For guarded edits, capture `dist/diagram revision <original>`, write and validate a candidate, then use `dist/diagram write <original> --from <candidate> --expect <revision>`. A stale revision fails without overwriting the source. Cooperating writers use a persistent sidecar `.lock` file; arbitrary tools that ignore the lock can still race, so agents should use the CLI's guarded write command.
+For an existing file, capture `dist/diagram revision <original>`, write and validate a candidate, then apply it with `dist/diagram write <original> --from <candidate> --expect <revision>`. A stale revision fails without overwriting the source. Cooperating writers use a sidecar `.lock` file; agents should use the guarded write command.
 
-The portable project skill is in [skills/xkcd-diagrams](skills/xkcd-diagrams/SKILL.md). See [Codex skill installation](#codex-skill) to install it for automatic diagram requests or explicit `$xkcd-diagrams` invocation. The workflow creates editable `.diagram.json` documents and PNG previews, supports SVG delivery, and uses guarded writes for existing files.
+The [skill's format guide](skills/xkcd-diagrams/references/format.md) documents the shared JSON representation. Examples are available in [Examples](Examples/).
 
-## Verification
+## Verification and development
 
 ```sh
 ./scripts/check.sh
+./scripts/check-app.sh
 ```
 
-The 61 regression checks run as a standalone Swift executable so they also work with command-line tools installations lacking a complete Swift Testing runtime. They verify document round trips, validation, containment, cross-boundary layout, conversion to free placement, deterministic SVG, PNG output, stale write rejection, vector parsing, deletion, bundled assets, a 200-node diagram, Blueprint colors and grid, Dark colors and logo contrast, queue geometry, File round trips and exports, locked 4:3 document sizing and text/logo clearance across layouts and styles, document format identity after renaming, optional watermark persistence and transparent exports, connector rerouting after arrangement changes, all attachment-side combinations, manual and legacy routes, curved database outlines, connections inside parent boundaries, departure bends before nearby systems, per-object line widths in saved files and exports, mixed top-level placement without shifting existing groups, full-width containers below the diagram, minimum container dimensions, custom grids and spans, cell swapping and growth, grid diagnostics and ownership cleanup, conversion from grids to free placement, drag previews matching saved connector routes without changing the document, visible Sketch/Standard differences at 50% zoom with a shared custom font across all symbol types, and bounded Sketch variation, seeded connector strokes, preserved connector bends and shape attachment tangents, database text/logo clearance across styles, font sizes, and thick outlines, legacy theme compatibility, strict sketch-toggle validation, all ten color/stroke combinations in saved files and image exports, individual text sizes, resets, validation, export parity, and large-label clearance, and source-inspired brand palettes with matching PNG/SVG colors and white-logo contrast, and portable T1A platform and AI Agent symbols across all styles.
+The core suite contains 69 checks covering document validation, layout, routing, themes, exports, clipboard behavior, and symbols. Eight app checks exercise the editor/workspace stores, tab independence, file deduplication, close protection, restoration, external edits, and autosave cancellation. The checks use standalone Swift executables and work with Command Line Tools installations.
+
+| Source | Purpose |
+| --- | --- |
+| `Sources/DiagramCore` | Document model, layout, routing, symbols, exports, and guarded file writes |
+| `Sources/DiagramApp` | SwiftUI workspace, AppKit canvas, and editor state |
+| `Sources/DiagramCLI` | Headless commands for agents and scripts |
+| `Tests/DiagramChecks` | Core regression checks |
+| `Tests/DiagramAppChecks` | Editor and workspace checks |
+| `skills/xkcd-diagrams` | Portable agent instructions and CLI helper |
+
+See the [PRD](PRD.md) for product scope and [asset notes](docs/ASSETS.md) for logo sources and geometry. Vendor names and logos belong to their respective owners.
 
 ## Current limits
 
-This is an initial prototype, not the entire first release in the PRD. Routing uses simple orthogonal paths and does not yet avoid every obstacle; manual waypoints provide control. Automatic connector labels try to avoid system labels and node frames. Multiple selection, copy/paste, container duplication, reusable profile editing, autosave recovery after a process crash, and a native asset import UI remain to be implemented. Font size and family are configurable; weight controls are pending. Nested container layouts are supported, but full graph layout is outside the initial scope.
-
-The library contains six generic presets (System, Database, Queue, AI Agent, Person, and Text), a Documents group with File, XLSX, PDF, and DOCX, and 24 branded presets in expandable T1A, Databricks, Azure, AWS, OpenAI, and Anthropic groups. T1A contains SecondStack, LakeSentry, 8FDE, Antares, and T1A logo boxes. AI Agent is an editable rounded box with a robot glyph and `type: agent`. The CLI library IDs for the new presets are `secondstack`, `lakesentry`, `8fde`, `antares`, `t1a`, and `ai-agent`. Databricks includes its main mark, Unity Catalog, Delta Lake, and a lakehouse preset; Azure includes Data Lake Storage, VM, Storage Account, SQL Database, and Azure OpenAI; AWS includes S3, EC2, Lambda, and RDS. OpenAI and Anthropic API presets reuse their company identities. Marks support black and white presentation, with light ink automatically used in Blueprint, Dark, and SecondStack. Geometry and provenance are documented in [docs/ASSETS.md](docs/ASSETS.md).
-
-## Source organization
-
-`DiagramCore` contains the model, semantic validation, layout, glyph outlines, seeded strokes, exports, library, and guarded file writes. `DiagramApp` contains the SwiftUI workspace, AppKit canvas, and editor state. `DiagramCLI` provides the headless interface. `Tests/DiagramChecks` contains regression checks. The schema and frozen library are bundled resources under `Sources/DiagramCore/Resources`.
+This is a working prototype. Orthogonal routing can still require manual waypoints to clear obstacles. Multiple selection, reusable profile editing, crash recovery, a native asset import UI, and font-weight controls remain to be implemented. Nested container layouts are supported; full graph layout is outside the initial scope.

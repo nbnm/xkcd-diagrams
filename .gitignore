@@ -6,3 +6,4 @@ dist/
 *.diagram.json.lock
 !Sources/**/Resources/**
 !assets/**
+!docs/screenshots/**

@@ -9,7 +9,7 @@ public enum Typography {
     public static func font(_ document: Diagram, for id: String) -> CTFont {
         font(document.theme, size: CGFloat(document.fontSize(for: id)))
     }
-    static func containerHeaderHeight(_ container: Container, theme: Theme) -> CGFloat {
+    public static func containerHeaderHeight(_ container: Container, theme: Theme) -> CGFloat {
         guard let size = container.fontSize else { return 36 }
         let font = font(theme, size: CGFloat(size))
         let lines = (container.label ?? "Container").components(separatedBy: "\n").count
@@ -19,21 +19,27 @@ public enum Typography {
         CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [NSAttributedString.Key(kCTFontAttributeName as String): font]))
     }
     public static func width(_ text: String, font: CTFont) -> CGFloat { CGFloat(CTLineGetTypographicBounds(line(text, font: font), nil, nil, nil)) }
-    public static func lines(_ text: String, font: CTFont, maxWidth: CGFloat) -> [String] {
+    static func inkFittingWidth(_ text: String, font: CTFont) -> CGFloat {
+        let line = line(text, font: font), advance = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        let ink = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        return advance + 2 * max(0, -ink.minX, ink.maxX - advance)
+    }
+    public static func lines(_ text: String, font: CTFont, maxWidth: CGFloat, fitInk: Bool = false) -> [String] {
         var lines: [String] = []
         for paragraph in text.components(separatedBy: "\n") {
             var current = ""
             for word in paragraph.split(separator: " ", omittingEmptySubsequences: true) {
                 let candidate = current.isEmpty ? String(word) : current + " " + word
-                if !current.isEmpty && width(candidate, font: font) > maxWidth { lines.append(current); current = String(word) }
+                let candidateWidth = fitInk ? inkFittingWidth(candidate, font: font) : width(candidate, font: font)
+                if !current.isEmpty && candidateWidth > maxWidth { lines.append(current); current = String(word) }
                 else { current = candidate }
             }
             lines.append(current)
         }
         return lines
     }
-    public static func paths(_ text: String, in rect: CGRect, font: CTFont, centered: Bool = true) -> CGPath {
-        let result = CGMutablePath(), strings = lines(text, font: font, maxWidth: rect.width)
+    public static func paths(_ text: String, in rect: CGRect, font: CTFont, centered: Bool = true, fitInk: Bool = false) -> CGPath {
+        let result = CGMutablePath(), strings = lines(text, font: font, maxWidth: rect.width, fitInk: fitInk)
         let lineHeight = CTFontGetAscent(font) + CTFontGetDescent(font) + 5
         let total = CGFloat(strings.count) * lineHeight
         var y = rect.midY - total / 2 + CTFontGetAscent(font)
@@ -62,11 +68,18 @@ public enum Typography {
 
 public struct DiagramLayout {
     public var frames: [String: CGRect]
+    public var contentOrigins: [String: CGPoint]
     public var order: [String]
     public var routes: [String: [CGPoint]]
     public var labelFrames: [String: CGRect]
     public var grids: [String: GridGeometry]
     public var bounds: CGRect
+    /// Convert a canvas point into a child's position. Only visible containers have a boundary.
+    public func position(at point: CGPoint, in parent: String, document: Diagram) -> Point {
+        let origin = contentOrigins[parent] ?? .zero
+        let x = point.x - origin.x, y = point.y - origin.y
+        return Point(x: parent == document.root ? x : max(0, x), y: parent == document.root ? y : max(0, y))
+    }
     public func hit(_ point: CGPoint, document: Diagram, excluding: Set<String> = []) -> String? {
         order.reversed().first { $0 != document.root && !excluding.contains($0) && frames[$0]!.contains(point) }
     }
@@ -97,14 +110,14 @@ public enum LayoutEngine {
             let size: CGSize
             if let n = d.nodes[id] {
                 let font = Typography.font(d, for: id)
-                let wordWidth = n.label.split(whereSeparator: { $0.isWhitespace }).map { Typography.width(String($0), font: font) }.max() ?? 0
-                let labelPadding: CGFloat = n.shape.isDocument ? DocumentContent.horizontalInset * 2 : 40
-                let logoWidth: CGFloat = n.asset == nil ? 0 : n.shape.isDocument ? DocumentContent.minimumLogoWidth : n.shape == .cylinder ? DatabaseContent.minimumLogoWidth : 0
+                let wordWidth = n.label.split(whereSeparator: { $0.isWhitespace }).map { n.shape == .actor ? Typography.inkFittingWidth(String($0), font: font) : Typography.width(String($0), font: font) }.max() ?? 0
+                let labelPadding: CGFloat = n.shape.isDocument ? DocumentContent.horizontalInset * 2 : n.shape == .actor ? UserContent.horizontalInset * 2 : 40
+                let logoWidth: CGFloat = n.asset == nil ? 0 : n.shape.isDocument ? DocumentContent.minimumLogoWidth : n.shape == .cylinder ? DatabaseContent.minimumLogoWidth : n.shape == .actor ? 110 : 0
                 let width = max(CGFloat(n.width ?? n.shape.defaultWidth), wordWidth + labelPadding, logoWidth)
-                let contentPadding: CGFloat = n.shape.isDocument ? DocumentContent.verticalPadding(n.shape, hasLogo: n.asset != nil) : n.shape == .cylinder ? DatabaseContent.verticalPadding(hasLogo: n.asset != nil) : n.asset != nil ? 70 : n.shape == .actor ? 96 : 32
+                let contentPadding: CGFloat = n.shape.isDocument ? DocumentContent.verticalPadding(n.shape, hasLogo: n.asset != nil) : n.shape == .cylinder ? DatabaseContent.verticalPadding(hasLogo: n.asset != nil) : n.asset != nil ? 70 : n.shape == .actor ? UserContent.verticalPadding : 32
                 let lineHeight = CTFontGetAscent(font) + CTFontGetDescent(font) + 5
                 func requiredHeight(at width: CGFloat) -> CGFloat {
-                    CGFloat(Typography.lines(n.label, font: font, maxWidth: width - labelPadding).count) * lineHeight + contentPadding
+                    CGFloat(Typography.lines(n.label, font: font, maxWidth: width - labelPadding, fitInk: n.shape == .actor).count) * lineHeight + contentPadding
                 }
                 let minimumHeight = CGFloat(n.height ?? n.shape.defaultHeight)
                 if let ratio = n.shape.fixedAspectRatio {
@@ -143,7 +156,10 @@ public enum LayoutEngine {
                         let p = d.nodes[child]?.position ?? d.containers[child]?.position ?? Point(x: Double(index) * 210, y: 0)
                         rect = rect.union(CGRect(x: p.x, y: p.y, width: childSizes[index].width, height: childSizes[index].height))
                     }
-                    content = rect.size; shifts[id] = CGPoint(x: -rect.minX, y: -rect.minY)
+                    content = rect.size
+                    // The invisible canvas keeps a fixed origin, even when its children cross it.
+                    // Visible free containers still expand around their contents.
+                    shifts[id] = id == d.root ? .zero : CGPoint(x: -rect.minX, y: -rect.minY)
                 }
                 let titleFont = c.fontSize == nil ? font : Typography.font(d, for: id)
                 let titleWidth = c.fontSize == nil ? Typography.width(c.label ?? "", font: titleFont) :
@@ -154,7 +170,7 @@ public enum LayoutEngine {
             sizes[id] = size; return size
         }
         _ = measure(d.root)
-        var frames: [String: CGRect] = [:], order: [String] = []
+        var frames: [String: CGRect] = [:], contentOrigins: [String: CGPoint] = [:], order: [String] = []
         func place(_ id: String, at origin: CGPoint, size forcedSize: CGSize? = nil) {
             let size = forcedSize ?? sizes[id]!
             frames[id] = CGRect(origin: origin, size: size); order.append(id)
@@ -169,6 +185,7 @@ public enum LayoutEngine {
                 grids[id] = grid
             }
             var cursor = CGPoint(x: origin.x + pad, y: origin.y + pad + header)
+            contentOrigins[id] = CGPoint(x: cursor.x + (shifts[id]?.x ?? 0), y: cursor.y + (shifts[id]?.y ?? 0))
             for (index, child) in c.children.enumerated() {
                 let childSize = sizes[child]!
                 var at = cursor
@@ -236,6 +253,6 @@ public enum LayoutEngine {
             }
         }
         if bounds.isNull { bounds = CGRect(x: 0, y: 0, width: 640, height: 420) }
-        return DiagramLayout(frames: frames, order: order, routes: routes, labelFrames: labelFrames, grids: grids, bounds: bounds.insetBy(dx: -36, dy: -36))
+        return DiagramLayout(frames: frames, contentOrigins: contentOrigins, order: order, routes: routes, labelFrames: labelFrames, grids: grids, bounds: bounds.insetBy(dx: -36, dy: -36))
     }
 }

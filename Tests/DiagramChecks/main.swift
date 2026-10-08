@@ -7,6 +7,105 @@ import DiagramCore
 
 let themeVariants = ThemePreset.allCases.flatMap { preset in [false, true].map { (preset, $0) } }
 
+func toolboxShortcutsCoverEveryPresetWithoutConflicts() throws {
+    let keys = ToolboxShortcuts.all.map(\.keys)
+    try expect(Set(keys).count == keys.count)
+    for key in keys { try expect(!keys.contains { $0.count < key.count && key.starts(with: $0) }) }
+    let presets = ToolboxShortcuts.all.compactMap { tool -> String? in if case .item(let id) = tool.action { return id }; return nil }
+    try expect(Set(presets) == Set(Library.items().map(\.id)))
+    for item in Library.items() {
+        try expect(ToolboxShortcuts.shortcut(for: .item(item.id))?.title == item.title)
+    }
+    try expect(ToolboxShortcuts.matching(["e"]).first?.action == .connector)
+    try expect(ToolboxShortcuts.matching(["x"]).first?.action == .container)
+    try expect(ToolboxShortcuts.matching(["2", "g"]).first?.action == .item("genie-agent"))
+    try expect(ToolboxShortcuts.matching(["3", "v"]).first?.action == .item("azure-vm"))
+}
+
+func clipboardDuplicatesNestedContainersAndInternalConnections() throws {
+    var original = Library.sample()
+    original.containers["platform"]?.fontSize = 24
+    original.nodes["lakehouse"]?.fontSize = 28; original.nodes["lakehouse"]?.strokeWidth = 4
+    original.containers["nested"] = Container(label: "Nested", layout: .init(mode: .grid, rows: 1, columns: 1, cells: ["catalog": GridCell()]), children: ["catalog"])
+    original.containers["platform"]?.children = ["ingestion", "lakehouse", "nested"]
+    original.containers["platform"]?.allowedChildTypes?.append("container")
+    try DiagramEditing.setLayout(.grid, container: "platform", document: &original)
+    let cells = try GridLayout.plan(original.containers["platform"]!, id: "platform").cells
+    original.containers["platform"]?.layout.cells = cells
+    original.connectors["store"]?.waypoints = [Point(x: 480, y: 195), Point(x: 510, y: 195)]
+    let clip = try DiagramClipboard.decode(DiagramClipboard.capture("platform", from: original).encoded())
+    try expect(Set(clip.content.nodes.keys) == ["ingestion", "lakehouse", "catalog"])
+    try expect(Set(clip.content.connectors.keys) == ["store", "govern"])
+    var d = original
+    let id = try clip.paste(into: d.root, at: Point(x: 900, y: 400), document: &d)
+    let descendants = d.descendants(of: id)
+    try expect(descendants.count == 5 && descendants.isDisjoint(with: original.descendants(of: "platform")))
+    try expect(d.nodes.count == original.nodes.count + 3 && d.connectors.count == original.connectors.count + 2)
+    try expect(d.containers[id]?.fontSize == 24 && d.containers[id]?.allowedChildTypes == original.containers["platform"]?.allowedChildTypes)
+    try expect(Set(d.containers[id]!.layout.cells!.keys) == Set(d.containers[id]!.children))
+    for child in descendants where d.containers[child] != nil {
+        try expect(Set(d.containers[child]!.layout.cells!.keys) == Set(d.containers[child]!.children))
+    }
+    for child in descendants where d.nodes[child]?.shape == .cylinder {
+        try expect(d.nodes[child]?.fontSize == 28 && d.nodes[child]?.strokeWidth == 4)
+        try expect(d.nodes[child]?.asset == original.nodes["lakehouse"]?.asset)
+    }
+    for (key, edge) in d.connectors where original.connectors[key] == nil {
+        try expect(descendants.contains(edge.from.element) && descendants.contains(edge.to.element))
+    }
+    for (key, node) in original.nodes { try expect(d.nodes[key] == node) }
+    for (key, edge) in original.connectors { try expect(d.connectors[key] == edge) }
+    try expect(d.assets == original.assets && d.theme == original.theme)
+    try expect(try Diagram.decode(d.encoded()) == d)
+    _ = try Renderer.svg(d)
+    let again = try clip.paste(into: d.root, at: Point(x: 925, y: 425), document: &d)
+    try expect(d.descendants(of: again).isDisjoint(with: descendants))
+}
+
+func clipboardPreservesAssetsAcrossFilesAndRejectsInvalidTargets() throws {
+    let source = Library.sample()
+    let clip = try DiagramClipboard.capture("lakehouse", from: source)
+    var target = Diagram(theme: .init(preset: .blueprint))
+    target.assets = source.assets; target.assets["databricks"]?.name = "Different embedded mark"
+    let before = target
+    let id = try clip.paste(into: target.root, at: Point(x: 50, y: 60), document: &target)
+    try expect(target.nodes.count == 1 && target.connectors.isEmpty && target.assets.count == before.assets.count + 1)
+    try expect(target.nodes[id]?.asset != "databricks" && target.assets["databricks"] == before.assets["databricks"])
+    try expect(target.assets[target.nodes[id]!.asset!] == source.assets["databricks"])
+    try expect(target.nodes[id]?.shape == .cylinder && target.nodes[id]?.label == "Lakehouse")
+    try expect(target.theme == before.theme && target.nodes[id]?.position == Point(x: 50, y: 60))
+    _ = try Renderer.png(target, scale: 0.3)
+    target.containers["restricted"] = Container(allowedChildTypes: ["application"])
+    target.containers[target.root]?.children.append("restricted")
+    let restricted = target
+    try expectThrows { _ = try clip.paste(into: "restricted", at: Point(), document: &target) }
+    try expect(target == restricted)
+    try expectThrows { _ = try clip.paste(into: "missing", at: Point(), document: &target) }
+    try expect(target == restricted)
+    var object = try JSONSerialization.jsonObject(with: clip.encoded()) as! [String: Any]
+    object["version"] = 99
+    try expectThrows { _ = try DiagramClipboard.decode(JSONSerialization.data(withJSONObject: object)) }
+    try expectThrows { _ = try DiagramClipboard.capture(source.root, from: source) }
+}
+
+func clipboardConnectionsRetainEndpointsAndManualRoutes() throws {
+    var d = Library.sample()
+    d.connectors["query"]?.waypoints = [Point(x: 620, y: 300)]
+    d.connectors["query"]?.strokeWidth = 3; d.connectors["query"]?.fontSize = 26
+    let original = d, clip = try DiagramClipboard.capture("query", from: d)
+    let id = try clip.paste(into: d.root, at: Point(x: 100, y: 100), document: &d)
+    try expect(d.connectors[id] == original.connectors["query"])
+    try expect(d.nodes == original.nodes && d.containers == original.containers && d.assets == original.assets)
+    var other = Library.sample(); other.id = "other-file"
+    let before = other
+    try expectThrows { _ = try clip.paste(into: other.root, at: Point(), document: &other) }
+    try expect(other == before)
+    d.remove("assistant")
+    let deleted = d
+    try expectThrows { _ = try clip.paste(into: d.root, at: Point(), document: &d) }
+    try expect(d == deleted)
+}
+
 func fontSizeEditsAffectOnlyTheirTargetAndResetToDefaults() throws {
     let original = Library.sample()
     for (id, collection) in [("sources", "nodes"), ("platform", "containers"), ("query", "connectors")] {
@@ -94,7 +193,8 @@ func individualLargeLabelsFitShapesContainersAndConnectors() throws {
                 d.nodes["a"] = Node(label: "Large label gjpqy\nSecond line", shape: shape, fontSize: 36)
                 d.containers[d.root]?.children = ["a"]
                 let scene = try Renderer.scene(d), glyphs = scene.drawings.last!.path.boundingBoxOfPath, frame = scene.layout.frames["a"]!
-                try expect(frame.insetBy(dx: 10, dy: 10).contains(glyphs))
+                let inset: CGFloat = shape == .actor ? 4 : 10
+                try expect(frame.insetBy(dx: inset, dy: inset).contains(glyphs))
                 if shape == .cylinder { try expect(glyphs.minY > scene.drawings[1].path.boundingBoxOfPath.maxY + 8) }
                 try expect(d.theme.fontSize == 12)
             }
@@ -371,6 +471,63 @@ func rootPlacementPreservesStacksAndConnections() throws {
         try expect(d.containers["platform"]?.layout.mode == .vertical)
         for id in d.containers[d.root]!.children { try expect(d.nodes[id]?.position != nil || d.containers[id]?.position != nil) }
     }
+}
+
+func borderlessPlacementKeepsOtherItemsFixedAcrossTheOrigin() throws {
+    var d = Library.sample()
+    try DiagramEditing.setLayout(.free, container: d.root, document: &d)
+    let initial = try LayoutEngine.layout(d)
+    let movedIDs = d.descendants(of: "platform")
+    for point in [CGPoint(x: -420, y: -340), CGPoint(x: 180, y: -240), CGPoint(x: -380, y: 160), CGPoint(x: 300, y: 220)] {
+        let before = try LayoutEngine.layout(d), frame = before.frames["platform"]!
+        let position = before.position(at: point, in: d.root, document: d)
+        try DiagramEditing.reparent("platform", into: d.root, position: position, document: &d)
+        let after = try LayoutEngine.layout(d)
+        try expect(after.frames["platform"]!.origin == point)
+        for id in initial.order where id != d.root {
+            if movedIDs.contains(id) {
+                try expect(after.frames[id] == before.frames[id]!.offsetBy(dx: point.x - frame.minX, dy: point.y - frame.minY))
+            } else { try expect(after.frames[id] == initial.frames[id]) }
+            try expect(after.bounds.contains(after.frames[id]!))
+        }
+        try expect(after.routes != before.routes)
+        for points in after.routes.values {
+            for (a, b) in zip(points, points.dropFirst()) { try expect(a.x == b.x || a.y == b.y) }
+        }
+    }
+    let layout = try LayoutEngine.layout(d)
+    let position = layout.position(at: CGPoint(x: -510, y: -410), in: d.root, document: d)
+    try DiagramEditing.reparent("platform", into: d.root, position: position, document: &d)
+    let beforePaste = try LayoutEngine.layout(d), clip = try DiagramClipboard.capture("platform", from: d)
+    let pasteAt = beforePaste.position(at: CGPoint(x: clip.origin.x + 24, y: clip.origin.y + 24), in: d.root, document: d)
+    let copy = try clip.paste(into: d.root, at: pasteAt, document: &d)
+    let afterPaste = try LayoutEngine.layout(d)
+    try expect(afterPaste.frames[copy]!.origin == CGPoint(x: -486, y: -386))
+    for id in beforePaste.order where id != d.root { try expect(afterPaste.frames[id] == beforePaste.frames[id]) }
+    let reopened = try Diagram.decode(d.encoded())
+    try expect(try LayoutEngine.layout(reopened).frames == afterPaste.frames)
+    try expect(try !Renderer.svg(reopened).isEmpty)
+    try expect(CGImageSourceCreateWithData(try Renderer.png(reopened, scale: 0.3) as CFData, nil) != nil)
+}
+
+func placementCoordinatesRespectContainerHeadersAndCanvasFreedom() throws {
+    var d = Library.sample()
+    d.containers["platform"]?.fontSize = 36
+    let before = try LayoutEngine.layout(d)
+    try DiagramEditing.setLayout(.free, container: "platform", document: &d)
+    let after = try LayoutEngine.layout(d), origin = after.contentOrigins["platform"]!
+    for id in d.containers["platform"]!.children { try expect(after.frames[id] == before.frames[id]) }
+    let frame = after.frames["platform"]!, padding = d.containers["platform"]!.layout.padding
+    try expect(origin == CGPoint(x: frame.minX + padding, y: frame.minY + padding + Typography.containerHeaderHeight(d.containers["platform"]!, theme: d.theme)))
+    try expect(after.position(at: CGPoint(x: origin.x - 100, y: origin.y - 100), in: "platform", document: d) == Point())
+    let canvasOrigin = after.contentOrigins[d.root]!
+    try expect(after.position(at: CGPoint(x: canvasOrigin.x - 100, y: canvasOrigin.y - 100), in: d.root, document: d) == Point(x: -100, y: -100))
+    // Keyboard nudging must also use the rendered position when a file omits explicit coordinates.
+    d.nodes["sources"]?.position = nil
+    let implicit = try LayoutEngine.layout(d), source = implicit.frames["sources"]!
+    let nudge = implicit.position(at: CGPoint(x: source.minX - 10, y: source.minY - 10), in: d.root, document: d)
+    try DiagramEditing.reparent("sources", into: d.root, position: nudge, document: &d)
+    try expect(try LayoutEngine.layout(d).frames["sources"] == source.offsetBy(dx: -10, dy: -10))
 }
 
 func wideContainersCanSpanBelowTheDiagram() throws {
@@ -824,7 +981,7 @@ func fileRoundTripsAndExportsWithAttachedConnector() throws {
     d = try Diagram.decode(d.encoded())
     try expect(d.nodes["file"]?.shape == .file && d.nodes["file"]?.type == "file")
     let layout = try LayoutEngine.layout(d), frame = layout.frames["file"]!
-    try expect(frame.width == 192 && frame.height == 144)
+    try expect(frame.width == 144 && frame.height == 192)
     let body = SymbolGeometry.paths(.file, in: frame)[0]
     try expect(body.contains(CGPoint(x: frame.midX, y: frame.midY)))
     try expect(!body.contains(CGPoint(x: frame.maxX - 2, y: frame.minY + 2)))
@@ -877,7 +1034,63 @@ func groupedLibraryHasProductSymbols() throws {
     let items = Library.items()
     try expect(items.filter { $0.group == "Systems" }.count == 6)
     for group in Library.groups { try expect(items.filter { $0.group == group }.count >= 2) }
-    for id in ["unity-catalog", "delta-lake", "azure-data-lake", "azure-vm", "aws-s3", "aws-ec2"] { try expect(items.contains { $0.id == id && $0.asset != nil }) }
+    for id in ["unity-catalog", "delta-lake", "genie-agent", "azure-data-lake", "azure-vm", "aws-s3", "aws-ec2"] { try expect(items.contains { $0.id == id && $0.asset != nil }) }
+}
+
+func usersKeepCompactMarginsAndRightAngleAttachments() throws {
+    let user = Library.items().first { $0.id == "actor" }!
+    try expect(user.title == "User" && user.shape == .actor && user.type == "actor" && Shape.actor.title == "User")
+    for (preset, isSketch) in themeVariants {
+        for fontSize in [10.0, 16, 36] {
+            var d = Diagram(theme: Theme(preset: preset, sketch: isSketch, fontSize: fontSize))
+            d.nodes["user"] = user.node(); d.containers[d.root]?.children = ["user"]
+            let scene = try Renderer.scene(d), frame = scene.layout.frames["user"]!
+            let body = SymbolGeometry.paths(.actor, in: frame)[0].boundingBoxOfPath
+            let label = scene.drawings.last!.path.boundingBoxOfPath
+            try expect(frame.insetBy(dx: 4, dy: 4).contains(label) && label.minY > body.maxY + 3)
+            try expect(body.width > 28 && body.height > 65)
+            if fontSize <= 16 {
+                try expect(frame.width == 74)
+                let oldMargin = (170 - body.width) / 2, newMargin = (frame.width - body.width) / 2
+                try expect(newMargin / oldMargin > 0.25 && newMargin / oldMargin < 0.34)
+            }
+            d.nodes["target"] = Node(label: "System", position: Point(x: 250, y: 0))
+            d.containers[d.root]?.children.append("target")
+            for side in [Side.left, .right, .top, .bottom] {
+                d.connectors["edge"] = Connector(from: Endpoint("user", side: side), to: Endpoint("target", side: .left))
+                let layout = try LayoutEngine.layout(d), frame = layout.frames["user"]!, route = layout.routes["edge"]!
+                try expectRightAngleAttachments(route, source: side, destination: .left)
+                if side == .left { try expect(route.first == CGPoint(x: frame.minX, y: frame.midY)) }
+                if side == .right { try expect(route.first == CGPoint(x: frame.maxX, y: frame.midY)) }
+                try expect(layout.connectionPreview(from: "user", to: "target", at: frame.origin, document: d) != nil)
+            }
+            d.nodes["user"]?.label = "Existing reviewer"; d.nodes["user"]?.width = 220
+            let original = d, reopened = try Diagram.decode(d.encoded())
+            try expect(reopened == original && reopened.nodes["user"]?.label == "Existing reviewer")
+        }
+    }
+}
+
+func genieAgentLogoIsPortableInAllStyles() throws {
+    let item = Library.items().first { $0.id == "genie-agent" }!
+    try expect(item.group == "Databricks" && item.title == "Genie Agent" && item.type == "agent" && item.shape == .roundedRectangle)
+    let asset = item.asset!
+    try expect(asset.source == "https://www.databricks.com/sites/default/files/2026-05/icon-genie.svg" && asset.paths.count == 3)
+    let box = CGRect(x: asset.viewBox[0], y: asset.viewBox[1], width: asset.viewBox[2], height: asset.viewBox[3])
+    for path in asset.paths { try expect(box.contains(try SVGPath.parse(path).boundingBoxOfPath)) }
+    for (preset, isSketch) in themeVariants {
+        for variant in [LogoVariant.black, .white] {
+            var d = Diagram(theme: Theme(preset: preset, sketch: isSketch))
+            d.nodes[item.id] = item.node(); d.nodes[item.id]?.variant = variant; d.nodes[item.id]?.label = "Custom Genie"
+            d.assets[item.id] = asset; d.containers[d.root]?.children = [item.id]
+            let original = d, scene = try Renderer.scene(d), frame = scene.layout.frames[item.id]!
+            let label = scene.drawings.last!.path.boundingBoxOfPath
+            try expect(frame.contains(label) && label.minY > frame.minY + 48)
+            try expect(try !Renderer.svg(d).isEmpty && Renderer.svg(d) == Renderer.svg(d))
+            try expect(CGImageSourceCreateWithData(try Renderer.png(d, scale: 0.5) as CFData, nil) != nil)
+            try expect(d == original && Diagram.decode(d.encoded()) == original)
+        }
+    }
 }
 
 func t1aPlatformsAndAIAgentStayPortableAcrossStyles() throws {
@@ -966,17 +1179,17 @@ func documentPresetsRetainTheirFormatWhenRenamed() throws {
     }
 }
 
-func documentShapesKeepFourByThreeWhenResized() throws {
+func documentShapesKeepPortraitThreeByFourWhenResized() throws {
     let vendor = Library.items().first { $0.id == "databricks" }!
     for shape in Shape.allCases where shape.isDocument {
-        for (width, height) in [(nil, nil), (320.0, nil), (nil, 300.0), (120.0, 144.0), (600.0, 80.0), (80.0, 600.0)] as [(Double?, Double?)] {
+        for (width, height) in [(nil, nil), (320.0, nil), (nil, 300.0), (120.0, 144.0), (192.0, 144.0), (600.0, 80.0), (80.0, 600.0)] as [(Double?, Double?)] {
             var d = Diagram()
             d.nodes["document"] = Node(type: "file", label: "Plan", shape: shape, width: width, height: height)
             d.nodes["other"] = Node(label: "Unchanged", position: Point(x: 1000, y: 0), width: 330, height: 210)
             d.containers[d.root]?.children = ["document", "other"]
             d.connectors["read"] = Connector(from: Endpoint("document", side: .right), to: Endpoint("other", side: .left))
             let original = d, layout = try LayoutEngine.layout(d), frame = layout.frames["document"]!
-            try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+            try expect(abs(frame.width / frame.height - 3.0 / 4.0) < 0.000001)
             try expect(frame.width >= width ?? shape.defaultWidth)
             try expect(frame.height >= height ?? shape.defaultHeight)
             try expect(layout.frames["other"]!.size == CGSize(width: 330, height: 210))
@@ -989,7 +1202,7 @@ func documentShapesKeepFourByThreeWhenResized() throws {
         small.nodes["document"] = Node(type: "file", label: "A", shape: shape, width: 80, height: 20, asset: vendor.id, variant: .white)
         small.containers[small.root]?.children = ["document"]
         let scene = try Renderer.scene(small), frame = scene.layout.frames["document"]!
-        try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+        try expect(abs(frame.width / frame.height - 3.0 / 4.0) < 0.000001)
         try expect(scene.drawings.filter { $0.stroke == nil }.allSatisfy { frame.contains($0.path.boundingBoxOfPath) })
     }
 }
@@ -1013,7 +1226,7 @@ func documentTextGrowthKeepsRatioAcrossLayoutsAndExports() throws {
             let original = d, scene = try Renderer.scene(d)
             for (id, node) in d.nodes {
                 let frame = scene.layout.frames[id]!
-                try expect(abs(frame.width / frame.height - 4.0 / 3.0) < 0.000001)
+                try expect(abs(frame.width / frame.height - 3.0 / 4.0) < 0.000001)
                 try expect(frame.width > 200 && frame.height > 150)
                 let top: CGFloat = node.shape == .file ? 24 : 108
                 let rect = CGRect(x: frame.minX + 22, y: frame.minY + top + 43, width: frame.width - 44, height: frame.height - top - 12 - 43)
@@ -1374,6 +1587,10 @@ func expectThrows(_ body: () throws -> Void, line: UInt = #line) throws {
 }
 
 let checks: [(String, () throws -> Void)] = [
+    ("toolboxShortcutsCoverEveryPresetWithoutConflicts", toolboxShortcutsCoverEveryPresetWithoutConflicts),
+    ("clipboardDuplicatesNestedContainersAndInternalConnections", clipboardDuplicatesNestedContainersAndInternalConnections),
+    ("clipboardPreservesAssetsAcrossFilesAndRejectsInvalidTargets", clipboardPreservesAssetsAcrossFilesAndRejectsInvalidTargets),
+    ("clipboardConnectionsRetainEndpointsAndManualRoutes", clipboardConnectionsRetainEndpointsAndManualRoutes),
     ("t1aPlatformsAndAIAgentStayPortableAcrossStyles", t1aPlatformsAndAIAgentStayPortableAcrossStyles),
     ("brandThemesKeepReadableSemanticColorsInPNGAndSVG", brandThemesKeepReadableSemanticColorsInPNGAndSVG),
     ("eightFDEUsesBrandShapeLinesAndWhiteContainers", eightFDEUsesBrandShapeLinesAndWhiteContainers),
@@ -1399,6 +1616,8 @@ let checks: [(String, () throws -> Void)] = [
     ("externalConnectionsPreserveVerticalStack", externalConnectionsPreserveVerticalStack),
     ("freeLayoutMaterializesStackPositions", freeLayoutMaterializesStackPositions),
     ("rootPlacementPreservesStacksAndConnections", rootPlacementPreservesStacksAndConnections),
+    ("borderlessPlacementKeepsOtherItemsFixedAcrossTheOrigin", borderlessPlacementKeepsOtherItemsFixedAcrossTheOrigin),
+    ("placementCoordinatesRespectContainerHeadersAndCanvasFreedom", placementCoordinatesRespectContainerHeadersAndCanvasFreedom),
     ("wideContainersCanSpanBelowTheDiagram", wideContainersCanSpanBelowTheDiagram),
     ("belowPlacementHandlesNegativeAndInvalidTargets", belowPlacementHandlesNegativeAndInvalidTargets),
     ("containerMinimumSizesRoundTripAndExpand", containerMinimumSizesRoundTripAndExpand),
@@ -1424,8 +1643,10 @@ let checks: [(String, () throws -> Void)] = [
     ("watermarkIsOptionalAndRendersInReservedFooter", watermarkIsOptionalAndRendersInReservedFooter),
     ("arrangementChangesReattachAndRerouteConnections", arrangementChangesReattachAndRerouteConnections),
     ("groupedLibraryHasProductSymbols", groupedLibraryHasProductSymbols),
+    ("usersKeepCompactMarginsAndRightAngleAttachments", usersKeepCompactMarginsAndRightAngleAttachments),
+    ("genieAgentLogoIsPortableInAllStyles", genieAgentLogoIsPortableInAllStyles),
     ("documentPresetsRetainTheirFormatWhenRenamed", documentPresetsRetainTheirFormatWhenRenamed),
-    ("documentShapesKeepFourByThreeWhenResized", documentShapesKeepFourByThreeWhenResized),
+    ("documentShapesKeepPortraitThreeByFourWhenResized", documentShapesKeepPortraitThreeByFourWhenResized),
     ("documentTextGrowthKeepsRatioAcrossLayoutsAndExports", documentTextGrowthKeepsRatioAcrossLayoutsAndExports),
     ("connectorsRespectAllAttachmentSides", connectorsRespectAllAttachmentSides),
     ("manualAndLegacyStraightConnectionsStayPerpendicular", manualAndLegacyStraightConnectionsStayPerpendicular),

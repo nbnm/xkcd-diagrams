@@ -2,11 +2,20 @@ import AppKit
 import SwiftUI
 import DiagramCore
 
-@MainActor final class EditorStore: ObservableObject {
+struct CanvasViewport: Equatable {
+    var zoom: CGFloat
+    var offset: CGPoint
+}
+
+@MainActor final class EditorStore: ObservableObject, Identifiable {
+    let id = UUID()
     @Published var document: Diagram
     @Published var scene: RenderScene
     @Published var selection: String?
     @Published var connecting = false
+    @Published var placingContainer = false
+    @Published var placingItem: String?
+    @Published var labelEditRequest = 0
     @Published var connectionStart: String?
     @Published var url: URL?
     @Published var dirty = false
@@ -19,15 +28,19 @@ import DiagramCore
     @Published var status = "Ready"
     @Published var historyVersion = 0
     let library: [DiagramCore.LibraryItem] = Library.items()
+    var canvasViewport: CanvasViewport?
+    var canSaveTo: ((URL) -> Bool)?
     private var revision: String?
     private var past: [Diagram] = [], future: [Diagram] = []
     private var lastAction = "", lastChange = Date.distantPast
     private var autosave: DispatchWorkItem?
+    private var clipboardChange = -1, pasteCount = 0
+    private static let itemPasteboardType = NSPasteboard.PasteboardType("com.t1a.diagrams.elements")
 
-    init() {
-        let sample = Library.sample()
-        document = sample
-        scene = try! Renderer.scene(sample)
+    init(document: Diagram = Library.sample(), url: URL? = nil, revision: String? = nil) {
+        self.document = document
+        scene = try! Renderer.scene(document)
+        self.url = url; self.revision = revision
     }
     var canUndo: Bool { !past.isEmpty }
     var canRedo: Bool { !future.isEmpty }
@@ -42,12 +55,79 @@ import DiagramCore
     }
     func beginConnection(from id: String? = nil) {
         guard id == nil || isConnectionEndpoint(id!) else { return }
+        placingContainer = false
+        placingItem = nil
         connecting = true; connectionStart = id
         if let id { selection = id }
         status = id == nil ? "Drag between objects, or click the source and destination" : "Drag from this source, or click a destination"
     }
     func cancelConnection() {
         connecting = false; connectionStart = nil; status = "Ready"
+    }
+    func beginContainerPlacement() {
+        cancelTools(); placingContainer = true
+        status = "Click the canvas to place a container"
+    }
+    func activateTool(_ action: ToolboxAction) {
+        switch action {
+        case .container: beginContainerPlacement()
+        case .connector: beginConnection()
+        case .item(let id):
+            guard let item = library.first(where: { $0.id == id }) else { return }
+            cancelTools(); placingItem = id; status = "Click the canvas to place \(item.title) · Esc to cancel"
+        }
+    }
+    func cancelTools() {
+        placingContainer = false; placingItem = nil; cancelConnection()
+    }
+    func editLabel(_ id: String) {
+        guard id != document.root, document.nodes[id] != nil || document.containers[id] != nil || document.connectors[id] != nil else { return }
+        cancelTools(); selection = id; labelEditRequest += 1
+    }
+    func clipboardCommand(_ command: String) {
+        // Keep the native text responder responsible for editing fields and source JSON.
+        if let responder = NSApp.keyWindow?.firstResponder,
+           responder is NSTextView || responder is NSTextField {
+            NSApp.sendAction(NSSelectorFromString(command + ":"), to: nil, from: nil)
+            return
+        }
+        switch command {
+        case "copy": copySelection()
+        case "paste": pasteSelection()
+        case "cut": if copySelection() { deleteSelection() }
+        default: break
+        }
+    }
+    @discardableResult func copySelection() -> Bool {
+        guard let id = selection, id != document.root else { return false }
+        do {
+            let data = try DiagramClipboard.capture(id, from: document).encoded()
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents(); pasteboard.setData(data, forType: Self.itemPasteboardType)
+            pasteboard.setString(String(decoding: data, as: UTF8.self), forType: .string)
+            clipboardChange = pasteboard.changeCount; pasteCount = 0
+            status = "Copied \(document.label(of: id))"; return true
+        } catch { errorMessage = error.localizedDescription; return false }
+    }
+    func pasteSelection() {
+        let pasteboard = NSPasteboard.general
+        guard let data = pasteboard.data(forType: Self.itemPasteboardType) else { status = "Copy a diagram item before pasting"; return }
+        do {
+            let clip = try DiagramClipboard.decode(data)
+            if clipboardChange != pasteboard.changeCount { clipboardChange = pasteboard.changeCount; pasteCount = 0 }
+            let sameDocument = clip.sourceDocumentID == document.id
+            let parent: String
+            if sameDocument, let original = clip.sourceParent, document.containers[original] != nil { parent = original }
+            else { parent = selection.flatMap { document.containers[$0] != nil ? $0 : nil } ?? document.root }
+            let shift = Double(pasteCount + 1) * 24
+            let position = sameDocument
+                ? scene.layout.position(at: CGPoint(x: clip.origin.x + shift, y: clip.origin.y + shift), in: parent, document: document)
+                : Point(x: shift + 40, y: shift + 40)
+            var pasted: String?
+            let before = document
+            mutate("Paste item", coalescingKey: UUID().uuidString) { pasted = try clip.paste(into: parent, at: position, document: &$0) }
+            if document != before, let pasted { cancelTools(); selection = pasted; pasteCount += 1; status = "Pasted \(document.label(of: pasted))" }
+        } catch { errorMessage = error.localizedDescription }
     }
     func connect(from source: String, to destination: String) {
         guard source != destination, isConnectionEndpoint(source), isConnectionEndpoint(destination) else { return }
@@ -93,35 +173,36 @@ import DiagramCore
         } else { selection = id }
     }
     func add(_ item: DiagramCore.LibraryItem, point: CGPoint? = nil, parent: String? = nil) {
+        cancelTools()
         let target = parent ?? selection.flatMap { document.containers[$0] != nil ? $0 : nil } ?? document.root
         let id = item.id + "-" + UUID().uuidString.prefix(6).lowercased()
         mutate("Add \(item.title)") { d in
-            let frame = scene.layout.frames[target] ?? .zero, padding = d.containers[target]!.layout.padding
-            let header: Double = target == d.root ? 0 : 36
-            let p = point.map { Point(x: max(0, $0.x - frame.minX - padding), y: max(0, $0.y - frame.minY - padding - header)) }
+            let origin = scene.layout.contentOrigins[target] ?? .zero
+            let p = point.map { scene.layout.position(at: $0, in: target, document: d) }
                 ?? Point(x: Double(d.containers[target]!.children.count % 3) * 220 + 40, y: Double(d.containers[target]!.children.count / 3) * 150 + 40)
             d.nodes[id] = item.node(at: d.containers[target]!.layout.mode == .free ? p : nil)
             if let asset = item.asset { d.assets[item.id] = asset }
             d.containers[target]?.children.append(id)
             try DiagramEditing.ensureGridRoom(container: target, document: &d)
             if let point, let grid = scene.layout.grids[target] {
-                let local = CGPoint(x: point.x - frame.minX - padding, y: point.y - frame.minY - padding - header)
+                let local = CGPoint(x: point.x - origin.x, y: point.y - origin.y)
                 try DiagramEditing.setGridCell(grid.cell(at: local), element: id, document: &d)
             }
         }
         if document.nodes[id] != nil { selection = id }
     }
     func addContainer(point: CGPoint? = nil, parent target: String? = nil) {
+        cancelTools()
         let parent = target ?? selection.flatMap { document.containers[$0] != nil ? $0 : nil } ?? document.root
         let id = "group-" + UUID().uuidString.prefix(6).lowercased()
         mutate("Add container") { d in
-            let owner = d.containers[parent]!, frame = scene.layout.frames[parent] ?? .zero
-            let position = point.map { Point(x: max(0, $0.x - frame.minX - owner.layout.padding), y: max(0, $0.y - frame.minY - owner.layout.padding - (parent == d.root ? 0 : 36))) } ?? Point(x: 100, y: 80)
+            let owner = d.containers[parent]!, origin = scene.layout.contentOrigins[parent] ?? .zero
+            let position = point.map { scene.layout.position(at: $0, in: parent, document: d) } ?? Point(x: 100, y: 80)
             d.containers[id] = Container(label: "Container", position: owner.layout.mode == .free ? position : nil)
             d.containers[parent]?.children.append(id)
             try DiagramEditing.ensureGridRoom(container: parent, document: &d)
             if let point, let grid = scene.layout.grids[parent] {
-                let local = CGPoint(x: point.x - frame.minX - owner.layout.padding, y: point.y - frame.minY - owner.layout.padding - (parent == d.root ? 0 : 36))
+                let local = CGPoint(x: point.x - origin.x, y: point.y - origin.y)
                 try DiagramEditing.setGridCell(grid.cell(at: local), element: id, document: &d)
             }
         }
@@ -138,6 +219,7 @@ import DiagramCore
         mutate("Place item in grid", coalescingKey: "cell-\(id)") { try DiagramEditing.setGridCell(cell, element: id, document: &$0) }
     }
     func addContainerBelow() {
+        cancelTools()
         let id = "group-" + UUID().uuidString.prefix(6).lowercased()
         mutate("Add container below diagram", coalescingKey: id) { d in
             if d.containers[d.root]?.layout.mode != .grid { try DiagramEditing.setLayout(.free, container: d.root, document: &d) }
@@ -180,12 +262,12 @@ import DiagramCore
     func move(_ id: String, to point: CGPoint, delta: CGPoint) {
         let excluded = document.descendants(of: id)
         let target = scene.layout.order.reversed().first {
-            document.containers[$0] != nil && !excluded.contains($0) && scene.layout.frames[$0]!.contains(point)
+            $0 != document.root && document.containers[$0] != nil && !excluded.contains($0) && scene.layout.frames[$0]!.contains(point)
         } ?? document.root
-        let c = document.containers[target]!, frame = scene.layout.frames[target]!
+        let c = document.containers[target]!, origin = scene.layout.contentOrigins[target]!
         let old = scene.layout.frames[id]!
         if let grid = scene.layout.grids[target] {
-            let local = CGPoint(x: point.x - frame.minX - c.layout.padding, y: point.y - frame.minY - c.layout.padding - (target == document.root ? 0 : 36))
+            let local = CGPoint(x: point.x - origin.x, y: point.y - origin.y)
             var cell = grid.cell(at: local)
             if let previous = grid.cells[id] {
                 cell.rowSpan = previous.rowSpan; cell.columnSpan = previous.columnSpan
@@ -197,8 +279,7 @@ import DiagramCore
             }
             return
         }
-        let position = Point(x: max(0, old.minX + delta.x - frame.minX - c.layout.padding),
-                             y: max(0, old.minY + delta.y - frame.minY - c.layout.padding - (target == document.root ? 0 : 36)))
+        let position = scene.layout.position(at: CGPoint(x: old.minX + delta.x, y: old.minY + delta.y), in: target, document: document)
         var index: Int? = nil
         if c.layout.mode != .free {
             let coordinate = c.layout.mode == .horizontal ? point.x : point.y
@@ -211,30 +292,23 @@ import DiagramCore
     }
     func nudge(_ dx: Double, _ dy: Double) {
         guard let id = selection, let parent = document.parent(of: id), document.containers[parent]?.layout.mode == .free else { return }
+        guard let frame = scene.layout.frames[id] else { return }
+        let position = scene.layout.position(at: CGPoint(x: frame.minX + dx, y: frame.minY + dy), in: parent, document: document)
         mutate("Nudge element") { d in
-            if var n = d.nodes[id] { var p = n.position ?? .init(); p.x = max(0, p.x + dx); p.y = max(0, p.y + dy); n.position = p; d.nodes[id] = n }
-            else if var c = d.containers[id] { var p = c.position ?? .init(); p.x = max(0, p.x + dx); p.y = max(0, p.y + dy); c.position = p; d.containers[id] = c }
+            if d.nodes[id] != nil { d.nodes[id]?.position = position }
+            else if d.containers[id] != nil { d.containers[id]?.position = position }
         }
-    }
-    func newDocument() {
-        guard confirmUnsaved() else { return }
-        reset(Diagram(), url: nil, revision: nil); fitRequest += 1
-    }
-    func loadExample() {
-        guard confirmUnsaved() else { return }
-        reset(Library.sample(), url: nil, revision: nil); fitRequest += 1
-    }
-    func open() {
-        guard confirmUnsaved() else { return }
-        let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]; panel.canChooseDirectories = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }; open(url)
     }
     func open(_ url: URL) {
         do { let (d, rev) = try DiagramFiles.read(url); reset(d, url: url, revision: rev); fitRequest += 1 }
         catch { errorMessage = error.localizedDescription }
     }
+    func revealFileInFinder() {
+        guard let url else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
     private func reset(_ d: Diagram, url: URL?, revision: String?) {
-        autosave?.cancel(); selection = nil; connectionStart = nil; connecting = false
+        autosave?.cancel(); selection = nil; connectionStart = nil; connecting = false; placingContainer = false; placingItem = nil
         document = d; scene = try! Renderer.scene(d)
         self.url = url; self.revision = revision; dirty = false; externalChange = false
         past = []; future = []; historyVersion += 1; status = "Ready"; lastAction = ""
@@ -246,6 +320,9 @@ import DiagramCore
             guard panel.runModal() == .OK else { return false }; destination = panel.url
         }
         guard let destination else { return false }
+        guard canSaveTo?(destination) != false else {
+            errorMessage = "This file is already open in another tab. Choose a different filename."; return false
+        }
         do {
             let same = destination.standardizedFileURL == url?.standardizedFileURL
             let rev = try DiagramFiles.write(document, to: destination, expectedRevision: same ? revision : nil, overwrite: !same)
@@ -285,6 +362,7 @@ import DiagramCore
         let answer = alert.runModal()
         return answer == .alertSecondButtonReturn || (answer == .alertFirstButtonReturn && save())
     }
+    func stopAutosave() { autosave?.cancel(); autosave = nil }
     private func scheduleSave() {
         autosave?.cancel(); guard url != nil, !externalChange else { return }
         let task = DispatchWorkItem { [weak self] in guard let self, self.dirty, !self.externalChange else { return }; _ = self.save() }

@@ -27,16 +27,58 @@ struct DiagramCanvas: NSViewRepresentable {
     private var connectionGesture = false, connectionDragged = false
     private var connectionPress: String?, connectionClickSource: String?, connectionDropTarget: String?
     private var connectionPointer: CGPoint?
+    private var shortcutMonitor: Any?
+    private var shortcutPrefix: [String] = []
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
-    init(store: EditorStore) { self.store = store; lastZoomRequest = store.zoomRequest; super.init(frame: .zero); registerForDraggedTypes([.string]); setAccessibilityLabel("Diagram canvas") }
+    init(store: EditorStore) { self.store = store; lastZoomRequest = store.zoomRequest; lastFitRequest = store.fitRequest; super.init(frame: .zero); registerForDraggedTypes([.string]); setAccessibilityLabel("Diagram canvas") }
     required init?(coder: NSCoder) { fatalError() }
-    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); if window != nil { DispatchQueue.main.async { self.fit() } } }
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil, window != nil { rememberViewport() }
+        if let shortcutMonitor { NSEvent.removeMonitor(shortcutMonitor); self.shortcutMonitor = nil }
+        super.viewWillMove(toWindow: newWindow)
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard self.window != nil else { return }
+            if let viewport = self.store.canvasViewport {
+                self.zoom = viewport.zoom; self.offset = viewport.offset; self.publishZoom(); self.needsDisplay = true
+            } else { self.fit() }
+            self.window?.makeFirstResponder(self)
+        }
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, let window = self.window, (event.window ?? NSApp.keyWindow) === window, window.attachedSheet == nil else { return event }
+            if event.keyCode == 53, event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
+                self.shortcutPrefix = []; self.store.cancelTools(); self.clearGesture(); window.makeFirstResponder(self); return nil
+            }
+            guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+                  !(window.firstResponder is NSTextView), !(window.firstResponder is NSTextField) else {
+                self.shortcutPrefix = []; return event
+            }
+            guard let key = event.charactersIgnoringModifiers?.lowercased() else { return event }
+            var keys = self.shortcutPrefix + [key], matches = ToolboxShortcuts.matching(keys)
+            if matches.isEmpty { keys = [key]; matches = ToolboxShortcuts.matching(keys) }
+            self.shortcutPrefix = []
+            guard !matches.isEmpty else { return event }
+            if event.isARepeat { return nil }
+            self.clearGesture(); window.makeFirstResponder(self)
+            if let tool = matches.first(where: { $0.keys == keys }) { self.store.activateTool(tool.action) }
+            else {
+                self.shortcutPrefix = keys; self.store.cancelTools()
+                self.store.status = ToolboxShortcuts.groupHint(key) + " · Esc to cancel"
+            }
+            return nil
+        }
+    }
     func fit() {
         guard bounds.width > 0, bounds.height > 0 else { return }
         let r = store.scene.layout.bounds
         zoom = min(1.2, max(0.25, min((bounds.width - 90) / max(r.width, 1), (bounds.height - 90) / max(r.height, 1))))
         offset = CGPoint(x: (bounds.width - r.width * zoom) / 2 - r.minX * zoom, y: (bounds.height - r.height * zoom) / 2 - r.minY * zoom)
+        rememberViewport()
         publishZoom()
         needsDisplay = true
     }
@@ -123,6 +165,7 @@ struct DiagramCanvas: NSViewRepresentable {
         needsDisplay = true
     }
     override func mouseDown(with event: NSEvent) {
+        if !shortcutPrefix.isEmpty { store.cancelTools(); shortcutPrefix = [] }
         window?.makeFirstResponder(self)
         let p = convert(event.locationInWindow, from: nil)
         clearGesture()
@@ -130,6 +173,14 @@ struct DiagramCanvas: NSViewRepresentable {
         panning = event.modifierFlags.contains(.option)
         if panning { return }
         let w = world(p)
+        if store.placingContainer {
+            let parent = store.scene.layout.order.reversed().first { store.document.containers[$0] != nil && store.scene.layout.frames[$0]!.contains(w) } ?? store.document.root
+            store.addContainer(point: w, parent: parent); clearGesture(); return
+        }
+        if let id = store.placingItem, let item = store.library.first(where: { $0.id == id }) {
+            let parent = store.scene.layout.order.reversed().first { store.document.containers[$0] != nil && store.scene.layout.frames[$0]!.contains(w) } ?? store.document.root
+            store.add(item, point: w, parent: parent); clearGesture(); return
+        }
         if store.connecting {
             connectionGesture = true; connectionPress = connectionEndpoint(at: w); connectionClickSource = store.connectionStart
             connectionPointer = w
@@ -147,6 +198,9 @@ struct DiagramCanvas: NSViewRepresentable {
             let hit = edge ?? store.scene.layout.hit(w, document: store.document)
             store.select(hit); dragID = edge == nil && !store.connecting ? hit : nil; panning = hit == nil
         }
+        if event.clickCount == 2, let id = store.selection {
+            clearGesture(); store.editLabel(id); return
+        }
         needsDisplay = true
     }
     override func mouseDragged(with event: NSEvent) {
@@ -160,7 +214,7 @@ struct DiagramCanvas: NSViewRepresentable {
             }
             return
         }
-        if panning { offset.x += p.x - start.x; offset.y += p.y - start.y; dragStart = p }
+        if panning { offset.x += p.x - start.x; offset.y += p.y - start.y; dragStart = p; rememberViewport() }
         else { dragDelta = CGPoint(x: (p.x - start.x) / zoom, y: (p.y - start.y) / zoom) }
         needsDisplay = true
     }
@@ -183,13 +237,15 @@ struct DiagramCanvas: NSViewRepresentable {
     override func scrollWheel(with event: NSEvent) {
         if event.modifierFlags.contains(.command) {
             adjustZoom(zoom * exp(-event.scrollingDeltaY * 0.015), anchor: convert(event.locationInWindow, from: nil))
-        } else { offset.x -= event.scrollingDeltaX; offset.y -= event.scrollingDeltaY; needsDisplay = true }
+        } else { offset.x -= event.scrollingDeltaX; offset.y -= event.scrollingDeltaY; rememberViewport(); needsDisplay = true }
     }
     override func magnify(with event: NSEvent) { adjustZoom(zoom * (1 + event.magnification), anchor: convert(event.locationInWindow, from: nil)) }
     private func adjustZoom(_ next: CGFloat, anchor: CGPoint) {
         let p = world(anchor); zoom = min(3, max(0.2, next)); offset = CGPoint(x: anchor.x - p.x * zoom, y: anchor.y - p.y * zoom)
+        rememberViewport()
         publishZoom(); needsDisplay = true
     }
+    private func rememberViewport() { store.canvasViewport = CanvasViewport(zoom: zoom, offset: offset) }
     private func publishZoom() {
         // NSViewRepresentable updates may be in progress; publish on the next UI cycle.
         DispatchQueue.main.async { [weak self] in
@@ -212,16 +268,21 @@ struct DiagramCanvas: NSViewRepresentable {
         if command && event.charactersIgnoringModifiers == "z" { event.modifierFlags.contains(.shift) ? store.redo() : store.undo(); return }
         if command && ["+", "="].contains(event.charactersIgnoringModifiers ?? "") { store.zoomIn(); return }
         if command && event.charactersIgnoringModifiers == "-" { store.zoomOut(); return }
+        if command && event.charactersIgnoringModifiers == "c" { store.copySelection(); return }
+        if command && event.charactersIgnoringModifiers == "v" { store.pasteSelection(); return }
         switch event.keyCode {
         case 51, 117: store.deleteSelection()
         case 123: store.nudge(-step, 0)
         case 124: store.nudge(step, 0)
         case 125: store.nudge(0, step)
         case 126: store.nudge(0, -step)
-        case 53: store.cancelConnection(); store.selection = nil; clearGesture()
+        case 53: store.cancelTools(); store.selection = nil; clearGesture()
         default: super.keyDown(with: event)
         }
     }
+    @objc func copy(_ sender: Any?) { store.copySelection() }
+    @objc func paste(_ sender: Any?) { store.pasteSelection() }
+    @objc func cut(_ sender: Any?) { if store.copySelection() { store.deleteSelection() } }
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { updateLibraryDrag(sender) }
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { updateLibraryDrag(sender) }
     override func draggingExited(_ sender: NSDraggingInfo?) { connectionDropTarget = nil; needsDisplay = true }

@@ -10,21 +10,25 @@ enum AppAppearance: String, CaseIterable {
 
 @main struct DiagramApplication: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    @StateObject private var store = EditorStore()
+    @StateObject private var workspace = WorkspaceStore()
     @AppStorage("appAppearance") private var appAppearance: AppAppearance = .light
+    private var store: EditorStore { workspace.activeStore }
     var body: some Scene {
-        WindowGroup("XKCD Diagrams") {
-            EditorView(store: store, appAppearance: $appAppearance)
+        Window("XKCD Diagrams", id: "editor") {
+            WorkspaceView(workspace: workspace, appAppearance: $appAppearance)
                 .preferredColorScheme(appAppearance.colorScheme)
                 .frame(minWidth: 1080, minHeight: 680)
-                .onAppear { delegate.store = store; NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true) }
+                .onAppear { delegate.workspace = workspace; NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true) }
         }
         .defaultSize(width: 1380, height: 840)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("New Diagram", action: store.newDocument).keyboardShortcut("n")
-                Button("Open…", action: store.open).keyboardShortcut("o")
-                Button("Open Example", action: store.loadExample)
+                Button("New Diagram", action: workspace.newTab).keyboardShortcut("n")
+                Button("New Tab", action: workspace.newTab).keyboardShortcut("t")
+                Button("Open…", action: workspace.open).keyboardShortcut("o")
+                Button("Open Example", action: workspace.openExample)
+                Divider()
+                Button("Close Tab", action: workspace.closeActiveTab).keyboardShortcut("w").disabled(store.sourceVisible)
             }
             CommandGroup(replacing: .saveItem) {
                 Button("Save", action: { store.save() }).keyboardShortcut("s")
@@ -36,6 +40,28 @@ enum AppAppearance: String, CaseIterable {
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo", action: store.undo).keyboardShortcut("z").disabled(!store.canUndo)
                 Button("Redo", action: store.redo).keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!store.canRedo)
+            }
+            CommandGroup(replacing: .pasteboard) {
+                Button("Cut") { store.clipboardCommand("cut") }.keyboardShortcut("x")
+                Button("Copy") { store.clipboardCommand("copy") }.keyboardShortcut("c")
+                Button("Paste") { store.clipboardCommand("paste") }.keyboardShortcut("v")
+            }
+            CommandMenu("Toolbox") {
+                ForEach(Array(ToolboxShortcuts.all.filter { $0.keys.count == 1 }.enumerated()), id: \.offset) { _, tool in
+                    Button("\(tool.title) (\(tool.displayKeys))") { store.activateTool(tool.action) }
+                }
+                ForEach(Array(ToolboxShortcuts.groups.enumerated()), id: \.offset) { index, group in
+                    Menu(group) {
+                        ForEach(Array(ToolboxShortcuts.matching([String(index + 1)]).enumerated()), id: \.offset) { _, tool in
+                            Button("\(tool.title) (\(tool.displayKeys))") { store.activateTool(tool.action) }
+                        }
+                    }
+                }
+            }
+            CommandGroup(before: .windowList) {
+                Button("Next Tab") { workspace.switchTab(by: 1) }.keyboardShortcut("]", modifiers: [.command, .shift]).disabled(!workspace.canSwitchTabs)
+                Button("Previous Tab") { workspace.switchTab(by: -1) }.keyboardShortcut("[", modifiers: [.command, .shift]).disabled(!workspace.canSwitchTabs)
+                Divider()
             }
             CommandMenu("Diagram") {
                 Button("Add Container") { store.addContainer() }.keyboardShortcut("g", modifiers: [.command, .shift])
@@ -58,8 +84,18 @@ enum AppAppearance: String, CaseIterable {
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
-    weak var store: EditorStore?
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { store?.confirmUnsaved() == false ? .terminateCancel : .terminateNow }
+    private var pendingURLs: [URL] = []
+    weak var workspace: WorkspaceStore? {
+        didSet {
+            guard let workspace else { return }
+            let urls = pendingURLs; pendingURLs = []
+            for url in urls { workspace.open(url) }
+        }
+    }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { workspace?.confirmCloseAll() == false ? .terminateCancel : .terminateNow }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func application(_ application: NSApplication, open urls: [URL]) { if let url = urls.first, store?.confirmUnsaved() != false { store?.open(url) } }
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let workspace else { pendingURLs.append(contentsOf: urls); return }
+        for url in urls { workspace.open(url) }
+    }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze the retained T1A platform and AI Agent SVGs without network access."""
+"""Freeze the retained T1A platform, AI Agent, and Genie Agent SVGs offline."""
 import json
 import subprocess
 import tempfile
@@ -22,4 +22,4 @@ agent = next(item for item in entries if item["id"] == "ai-agent")
 items.insert(next(i for i, item in enumerate(items) if item["id"] == "actor"), agent)
 items.extend(item for item in entries if item["id"] != "ai-agent")
 destination.write_text(json.dumps(items, indent=2) + "\n")
-print(f"Frozen five T1A platform marks and AI Agent; {len(items)} library entries")
+print(f"Frozen five T1A platform marks, AI Agent, and Genie Agent; {len(items)} library entries")

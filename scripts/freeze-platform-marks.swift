@@ -91,7 +91,8 @@ final class MarkParser: NSObject, XMLParserDelegate {
             ("8fde", "8FDE", "assets/vendor/8fde.svg", "https://8fde.ai/", "person.2"),
             ("antares", "Antares", "assets/vendor/antares.svg", "https://getantares.io/", "chart.bar"),
             ("t1a", "T1A", "assets/t1a-logo.svg", "https://t1a.com/images/t1a-LOGO.svg", "building.2"),
-            ("ai-agent", "AI Agent", "assets/ai-agent.svg", "builtin:ai-agent", "cpu")
+            ("ai-agent", "AI Agent", "assets/ai-agent.svg", "builtin:ai-agent", "cpu"),
+            ("genie-agent", "Genie Agent", "assets/vendor/genie-agent.svg", "https://www.databricks.com/sites/default/files/2026-05/icon-genie.svg", "sparkles")
         ]
         var entries: [[String: Any]] = []
         for (id, title, filename, source, symbol) in definitions {
@@ -99,8 +100,9 @@ final class MarkParser: NSObject, XMLParserDelegate {
             // Use LakeSentry's lighthouse symbol; the editable label supplies the product name.
             let paths = id == "lakesentry" ? Array(mark.paths.prefix(1)) : mark.paths
             let box = id == "lakesentry" ? [263.0, 0, 32, 56] : mark.viewBox
-            entries.append(["id": id, "title": title, "group": id == "ai-agent" ? "Systems" : "T1A",
-                "type": id == "ai-agent" ? "agent" : "service", "shape": id == "ai-agent" ? "roundedRectangle" : "rectangle", "symbol": symbol,
+            let agent = id == "ai-agent" || id == "genie-agent"
+            entries.append(["id": id, "title": title, "group": id == "ai-agent" ? "Systems" : id == "genie-agent" ? "Databricks" : "T1A",
+                "type": agent ? "agent" : "service", "shape": agent ? "roundedRectangle" : "rectangle", "symbol": symbol,
                 "asset": ["name": title, "source": source, "viewBox": box, "paths": paths]])
         }
         let data = try JSONSerialization.data(withJSONObject: entries, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])

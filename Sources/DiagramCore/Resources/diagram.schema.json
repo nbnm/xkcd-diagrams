@@ -108,13 +108,13 @@
           "$ref": "#/$defs/point"
         },
         "width": {
-          "description": "Minimum node width. File, XLSX, PDF, and DOCX grow width and height together to preserve a 4:3 ratio and fit content.",
+          "description": "Minimum node width. File, XLSX, PDF, and DOCX grow width and height together to preserve a 3:4 ratio and fit content.",
           "type": "number",
           "minimum": 20,
           "maximum": 4000
         },
         "height": {
-          "description": "Minimum node height. File, XLSX, PDF, and DOCX grow width and height together to preserve a 4:3 ratio and fit content.",
+          "description": "Minimum node height. File, XLSX, PDF, and DOCX grow width and height together to preserve a 3:4 ratio and fit content.",
           "type": "number",
           "minimum": 20,
           "maximum": 4000

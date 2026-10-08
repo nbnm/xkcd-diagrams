@@ -148,8 +148,8 @@ public enum Renderer {
                     drawings.append(asset.rendering == .outline ? Drawing(p, stroke: ink, width: max(0.65, width * 0.65)) : Drawing(p, fill: ink, evenOdd: true))
                 }
                 if node.shape != .cylinder && !node.shape.isDocument { labelRect.origin.y += 43; labelRect.size.height -= 43 }
-            } else if node.shape == .actor { labelRect.origin.y += 68; labelRect.size.height -= 68 }
-            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id)), fill: 0.12))
+            } else if node.shape == .actor { labelRect = UserContent.labelRect(in: r) }
+            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id), fitInk: node.shape == .actor), fill: 0.12))
         }
         for id in layout.order where id != document.root && document.containers[id] != nil {
             let r = layout.frames[id]!, label = document.containers[id]!.label ?? "Container"

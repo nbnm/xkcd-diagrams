@@ -7,7 +7,6 @@ struct EditorView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var search = ""
     @State private var expandedGroups: Set<String> = ["Documents", "T1A", "Databricks"]
-    private let poll = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var body: some View {
         VStack(spacing: 0) {
             if store.externalChange {
@@ -26,20 +25,27 @@ struct EditorView: View {
             Divider()
             HStack(spacing: 12) {
                 Circle().fill(store.externalChange ? Color.orange : Color.secondary.opacity(0.5)).frame(width: 5, height: 5)
-                Text(store.status)
-                Spacer()
+                Text(store.status).fixedSize()
+                if let url = store.url {
+                    Button(action: store.revealFileInFinder) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: "folder")
+                            Text(url.path).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                        }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel("File path").accessibilityValue(url.path)
+                        .help("Open this diagram's folder in Finder")
+                } else {
+                    Text("Unsaved diagram").frame(maxWidth: .infinity, alignment: .leading)
+                }
                 Text("\(store.document.nodes.count) systems · \(store.document.containers.count - 1) boundaries")
+                    .fixedSize()
                 Divider().frame(height: 12)
-                Text(store.connecting ? (store.connectionStart == nil ? "Select the source" : "Select the destination") : "⌥ drag to pan · pinch to zoom")
-            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 16).frame(height: 30)
+                Text(store.placingContainer || store.placingItem != nil ? "Click to place · Esc to cancel" : store.connecting ? (store.connectionStart == nil ? "Select the source" : "Select the destination") : "⌥ drag to pan · pinch to zoom")
+                    .fixedSize()
+            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 30)
         }
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(store.document.title).font(.system(size: 13, weight: .semibold))
-                    Text(store.url?.lastPathComponent ?? "Unsaved diagram").font(.system(size: 10)).foregroundStyle(.secondary)
-                }
-            }
             ToolbarItemGroup {
                 Picker("Color theme", selection: Binding(get: { store.document.theme.preset }, set: { value in store.mutate("Change color theme") { $0.theme.preset = value } })) {
                     ForEach(ThemePreset.allCases, id: \.self) { Text($0.displayName).tag($0) }
@@ -53,13 +59,6 @@ struct EditorView: View {
                         .accessibilityLabel("Sketch")
                         .help("Use sketch strokes and the default handwriting font with any color theme; custom fonts are preserved")
                 }.fixedSize()
-                Menu {
-                    Button("Add Container", action: { store.addContainer() })
-                    Button("Add Container Below Diagram", action: store.addContainerBelow)
-                } label: { Label("Container", systemImage: "rectangle.dashed").labelStyle(.titleAndIcon) }
-                  primaryAction: { store.addContainer() }
-                    .help("Add a container (⇧⌘G), or use the menu to add a wide container below the diagram")
-                ConnectorToolButton(store: store, toolbar: true).frame(width: 105, height: 28)
                 Button(action: store.zoomOut) { Image(systemName: "minus.magnifyingglass") }
                     .disabled(!store.canZoomOut).help("Zoom out (⌘−)").accessibilityLabel("Zoom Out")
                 Text("\(Int((store.zoomScale * 100).rounded()))%")
@@ -82,7 +81,6 @@ struct EditorView: View {
         .alert("Unable to apply change", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
             Button("OK") { store.errorMessage = nil }
         } message: { Text(store.errorMessage ?? "") }
-        .onReceive(poll) { _ in store.checkExternalChanges() }
     }
 
     private var library: some View {
@@ -97,9 +95,13 @@ struct EditorView: View {
                     Button { store.addContainer() } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "rectangle.dashed").font(.system(size: 18)).frame(width: 28)
-                            Text("Container").font(.system(size: 12, weight: .semibold)); Spacer()
-                        }.foregroundStyle(.primary).padding(.vertical, 10).padding(.horizontal, 7).contentShape(Rectangle())
-                    }.buttonStyle(.plain).onDrag { NSItemProvider(object: "__container" as NSString) }.help("Drag a container onto the canvas")
+                            HStack(spacing: 6) {
+                                Text("Container").font(.system(size: 12, weight: .semibold))
+                                Text("X").font(.system(size: 10).monospaced()).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }.foregroundStyle(store.placingContainer ? Color.accentColor : .primary).padding(.vertical, 10).padding(.horizontal, 7).contentShape(Rectangle())
+                    }.buttonStyle(.plain).onDrag { NSItemProvider(object: "__container" as NSString) }.help("Container — X. Click to add, drag onto the canvas, or press X then click to place. Esc cancels.")
                     ConnectorToolButton(store: store).frame(maxWidth: .infinity).frame(height: 40)
                     Divider().padding(.vertical, 6)
                     Text("Shapes").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary).padding(.leading, 7).padding(.vertical, 5)
@@ -137,7 +139,12 @@ struct EditorView: View {
         if !items.isEmpty {
             DisclosureGroup(isExpanded: Binding(get: { !search.isEmpty || expandedGroups.contains(group) }, set: { v in if v { expandedGroups.insert(group) } else { expandedGroups.remove(group) } })) {
                 ForEach(items) { item in libraryRow(item) }
-            } label: { Text(group).font(.system(size: 12, weight: .medium)) }.padding(.horizontal, 7).padding(.vertical, 5)
+            } label: {
+                HStack {
+                    Text(group).font(.system(size: 12, weight: .medium)); Spacer()
+                    if let index = ToolboxShortcuts.groups.firstIndex(of: group) { Text(String(index + 1)).font(.system(size: 10).monospaced()).foregroundStyle(.secondary) }
+                }.help(ToolboxShortcuts.groups.firstIndex(of: group).map { "Press \($0 + 1), then the key beside a \(group) item to select it. Esc cancels." } ?? "Expand document presets; hover over an item for its shortcut.")
+            }.padding(.horizontal, 7).padding(.vertical, 5)
         }
     }
     private func libraryRow(_ item: DiagramCore.LibraryItem) -> some View {
@@ -145,8 +152,12 @@ struct EditorView: View {
             HStack(spacing: 10) {
                 Image(nsImage: LibraryThumbnail.image(item, dark: colorScheme == .dark)).frame(width: 28, height: 24)
                 Text(item.title).font(.system(size: 12)); Spacer()
-            }.foregroundStyle(.primary).padding(.vertical, 7).padding(.horizontal, 7).contentShape(Rectangle())
-        }.buttonStyle(.plain).onDrag { NSItemProvider(object: item.id as NSString) }.help("Drag onto the canvas, or click to add")
+                if let shortcut = ToolboxShortcuts.shortcut(for: .item(item.id)) {
+                    Text(shortcut.displayKeys).font(.system(size: 10).monospaced()).foregroundStyle(.secondary)
+                }
+            }.foregroundStyle(store.placingItem == item.id ? Color.accentColor : .primary).padding(.vertical, 7).padding(.horizontal, 7).contentShape(Rectangle())
+        }.buttonStyle(.plain).onDrag { NSItemProvider(object: item.id as NSString) }
+            .help("\(item.title) — \(ToolboxShortcuts.shortcut(for: .item(item.id))?.displayKeys ?? ""). Click to add, drag onto the canvas, or use the shortcut then click to place. Esc cancels.")
     }
 }
 
@@ -175,7 +186,9 @@ struct OutlineBranch: View {
 struct Inspector: View {
     @ObservedObject var store: EditorStore
     @State private var waypointText = ""
+    @FocusState private var focusedLabel: String?
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("INSPECTOR").font(.system(size: 10, weight: .semibold)).tracking(1.4).foregroundStyle(.secondary)
@@ -238,6 +251,22 @@ struct Inspector: View {
                 }
             }.padding(20).font(.system(size: 12))
         }.background(Color(nsColor: .windowBackgroundColor))
+            .onChange(of: store.selection) { _, _ in focusedLabel = nil }
+            .onChange(of: store.labelEditRequest) { _, _ in
+                guard let id = store.selection else { return }
+                focusedLabel = nil
+                DispatchQueue.main.async {
+                    guard store.selection == id else { return }
+                    proxy.scrollTo("item-name-" + id, anchor: .top)
+                    focusedLabel = id
+                    DispatchQueue.main.async {
+                        guard store.selection == id, focusedLabel == id,
+                              let editor = NSApp.keyWindow?.firstResponder as? NSTextView else { return }
+                        editor.selectAll(nil)
+                    }
+                }
+            }
+        }
     }
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) { Text(title).font(.system(size: 12, weight: .semibold)); content() }
@@ -282,11 +311,12 @@ struct Inspector: View {
         let current = store.document.nodes[id] ?? snapshot
         return section("System") {
             TextField("Label", text: Binding(get: { store.document.nodes[id]?.label ?? "" }, set: { v in store.mutate("Edit label") { $0.nodes[id]?.label = v } })).textFieldStyle(.roundedBorder)
+                .focused($focusedLabel, equals: id).id("item-name-" + id).accessibilityLabel("Item name")
             Picker("Shape", selection: Binding(get: { store.document.nodes[id]?.shape ?? snapshot.shape }, set: { v in store.mutate("Change shape") { $0.nodes[id]?.shape = v } })) {
                 ForEach(Shape.allCases, id: \.self) { Text($0.title).tag($0) }
             }
-            Stepper("Width  \(Int(current.width ?? current.shape.defaultWidth))", value: Binding(get: { let node = store.document.nodes[id] ?? snapshot; return node.width ?? node.shape.defaultWidth }, set: { v in store.mutate("Resize system") { $0.nodes[id]?.width = v } }), in: 80...600, step: 10)
-            if current.shape.isDocument { Text("4:3 aspect ratio · grows to fit content").font(.caption).foregroundStyle(.secondary) }
+            Stepper("Width  \(Int(current.width ?? current.shape.defaultWidth))", value: Binding(get: { let node = store.document.nodes[id] ?? snapshot; return node.width ?? node.shape.defaultWidth }, set: { v in store.mutate("Resize system") { $0.nodes[id]?.width = v } }), in: (current.shape == .actor ? 40 : 80)...600, step: 10)
+            if current.shape.isDocument { Text("Portrait 3:4 · grows to fit content").font(.caption).foregroundStyle(.secondary) }
             Picker("Logo", selection: Binding(get: { store.document.nodes[id]?.asset ?? "__none" }, set: { value in
                 store.mutate("Change logo") { d in
                     if value == "__none" { d.nodes[id]?.asset = nil; d.nodes[id]?.variant = nil }
@@ -313,6 +343,7 @@ struct Inspector: View {
     private func container(_ id: String) -> some View {
         section(id == store.document.root ? "Diagram" : "Container") {
             TextField("Title", text: Binding(get: { id == store.document.root ? store.document.title : store.document.containers[id]?.label ?? "" }, set: { v in store.mutate("Edit title") { if id == $0.root { $0.title = v } else { $0.containers[id]?.label = v } } })).textFieldStyle(.roundedBorder)
+                .focused($focusedLabel, equals: id).id("item-name-" + id).accessibilityLabel("Item name")
             Picker("Arrange", selection: Binding(get: { store.document.containers[id]?.layout.mode ?? .free }, set: { v in store.mutate("Change arrangement") { try DiagramEditing.setLayout(v, container: id, document: &$0) } })) {
                 Text("Horizontal").tag(LayoutMode.horizontal); Text("Vertical").tag(LayoutMode.vertical); Text("Free").tag(LayoutMode.free); Text("Custom grid").tag(LayoutMode.grid)
             }
@@ -390,6 +421,7 @@ struct Inspector: View {
         let snapshot = store.document.connectors[id]
         return section("Connection") {
             TextField("Label", text: Binding(get: { store.document.connectors[id]?.label ?? "" }, set: { v in store.mutate("Edit connection label") { $0.connectors[id]?.label = v } })).textFieldStyle(.roundedBorder)
+                .focused($focusedLabel, equals: id).id("item-name-" + id).accessibilityLabel("Item name")
             Text("\(store.document.label(of: snapshot?.from.element ?? "")) → \(store.document.label(of: snapshot?.to.element ?? ""))").foregroundStyle(.secondary)
             Picker("Arrows", selection: Binding(get: { store.document.connectors[id]?.direction ?? snapshot?.direction ?? .forward }, set: { v in store.mutate("Change arrow") { $0.connectors[id]?.direction = v } })) {
                 Text("Forward").tag(Direction.forward); Text("Both").tag(Direction.both); Text("None").tag(Direction.none)
