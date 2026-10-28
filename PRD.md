@@ -407,3 +407,11 @@ The confirmed scope is sufficient to start a format and renderer prototype. Use 
 Add an expandable T1A group under Platforms with editable logo boxes for SecondStack, LakeSentry, 8FDE, Antares, and T1A. Freeze the official source vector geometry into each diagram, supporting black/white marks and every color/Sketch combination. Add AI Agent under Shapes as an editable rounded box with a simple robot icon and semantic `type: agent`. Expose stable CLI library IDs `secondstack`, `lakesentry`, `8fde`, `antares`, `t1a`, and `ai-agent`. Dragging or clicking these presets uses existing containment, selection, text sizing, and connector behavior.
 
 Databricks includes a Genie Agent preset with the official bundled Genie glyph, editable label, black/white logo variants, and `type: agent`. Agent geometry stays portable in diagram JSON and available offline in the editor and CLI.
+
+## Additional document modes — Free Drawing and Timeline
+
+Add a mode picker and explicit new-document commands for Diagram, Free Drawing, and Timeline. Each tab owns one mode; switching must preserve authored work and old diagram compatibility. All modes share saved JSON, themes, Sketch typography, autosave, undo/redo, zoom/pan, image exports, and agent CLI access.
+
+Free Drawing supports smoothed mouse strokes, direct canvas text entry/editing, per-stroke width/smoothing, selection and movement, whole-stroke/text erasing, and clipboard duplication. Retain raw stroke samples and stable IDs in the document; smoothing must preserve endpoints and avoid synthetic pen jitter. A completed stroke, move, or erase gesture is one undo step. Committing, canceling, saving, and switching tabs must not lose an active text draft.
+
+Timeline supports ordered tasks and zero-duration milestone rows, Gregorian calendar dates, inclusive finish dates, duration, owner, completion, visual finish-to-start dependencies, day/week/month scales, and bar/edge/row drag editing. Reject invalid dates, missing predecessors, duplicate IDs, and dependency cycles. Show date/dependency conflicts without silently rescheduling. This first implementation uses calendar days and manual scheduling; critical-path analysis, resource leveling, business-day calendars, and Microsoft Project file interchange remain outside scope.

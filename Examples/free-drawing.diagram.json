@@ -1,0 +1,106 @@
+{
+  "assets" : {
+
+  },
+  "connectors" : {
+
+  },
+  "containers" : {
+    "canvas" : {
+      "children" : [
+        "note"
+      ],
+      "layout" : {
+        "gap" : 28,
+        "mode" : "free",
+        "padding" : 28
+      }
+    }
+  },
+  "drawing" : {
+    "smoothing" : 0.65,
+    "strokeWidth" : 2,
+    "strokes" : [
+      {
+        "id" : "dc7bc57f-0814-4fcc-b5a6-f1a1839c962d",
+        "points" : [
+          {
+            "x" : 40,
+            "y" : 80
+          },
+          {
+            "x" : 90,
+            "y" : 45
+          },
+          {
+            "x" : 145,
+            "y" : 82
+          },
+          {
+            "x" : 195,
+            "y" : 46
+          },
+          {
+            "x" : 250,
+            "y" : 80
+          }
+        ],
+        "smoothing" : 0.65,
+        "strokeWidth" : 2
+      },
+      {
+        "id" : "314fdac9-4dfa-4d99-bb17-b46a7f1ced67",
+        "points" : [
+          {
+            "x" : 55,
+            "y" : 170
+          },
+          {
+            "x" : 220,
+            "y" : 170
+          },
+          {
+            "x" : 205,
+            "y" : 155
+          },
+          {
+            "x" : 220,
+            "y" : 170
+          },
+          {
+            "x" : 205,
+            "y" : 185
+          }
+        ],
+        "smoothing" : 0.65,
+        "strokeWidth" : 2
+      }
+    ]
+  },
+  "id" : "7cbe7504-5734-4709-8780-93abfc0f0f62",
+  "mode" : "drawing",
+  "nodes" : {
+    "note" : {
+      "label" : "Ideas, sketches, and notes",
+      "position" : {
+        "x" : 25,
+        "y" : 210
+      },
+      "shape" : "text",
+      "type" : "text",
+      "width" : 280
+    }
+  },
+  "root" : "canvas",
+  "schemaVersion" : 1,
+  "theme" : {
+    "fontSize" : 16,
+    "preset" : "standard",
+    "seed" : 42,
+    "sketch" : true,
+    "strokeWidth" : 1.6,
+    "version" : 1
+  },
+  "title" : "Free drawing",
+  "watermark" : false
+}

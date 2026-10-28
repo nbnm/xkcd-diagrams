@@ -1,6 +1,6 @@
 ---
 name: xkcd-diagrams
-description: Create, edit, render, or export diagrams using the XKCD Diagrams app CLI. Use whenever a diagram is requested, including architecture, IT systems, deployments, data flows, and flowcharts. Produce editable .diagram.json files and PNG or SVG images; honor explicitly requested alternative tools or source formats.
+description: Create, edit, render, or export diagrams, free drawings, and Gantt timelines using the XKCD Diagrams app CLI. Use for architecture, IT systems, deployments, data flows, flowcharts, sketches, and project timelines. Produce editable .diagram.json files and PNG or SVG images; honor explicitly requested alternative tools or source formats.
 ---
 
 # XKCD Diagrams
@@ -11,7 +11,9 @@ Use the app CLI as the default diagram authoring and rendering tool across proje
 
 Run [scripts/diagram.sh](scripts/diagram.sh) from this skill's directory, using its absolute path so it works from any project. The helper uses `XKCD_DIAGRAM_CLI` when set; otherwise it runs `/Volumes/Work/xkcd-diagrams/dist/diagram`. The override is an executable path, not a command with extra arguments. If the CLI is missing, report the missing dependency instead of silently switching diagram engines.
 
-In the commands below, `diagram` means that helper. Run `diagram help`, `diagram schema`, and `diagram library list` to obtain current commands, property types, and available symbols with frozen logo geometry. Read [the format guide](references/format.md) when authoring a document. Do not invent unsupported fields or logo asset IDs.
+In the commands below, `diagram` means that helper. Run `diagram help`, `diagram schema`, and `diagram library list` to obtain current commands, property types, and available symbols with frozen logo geometry. Read [the format guide](references/format.md) for diagrams, or [drawing and timeline modes](references/modes.md) for freehand documents or Gantt charts. Do not invent unsupported fields or logo asset IDs.
+
+Use `diagram init <file> --mode timeline` for dated project tasks and Gantt charts, `--mode drawing` for free strokes and text, and the default `diagram` mode for system/architecture diagrams. `--example` works with each mode. Preserve an existing document's mode unless the user requests conversion. Timeline dependencies are visual finish-to-start links, not automatic scheduling; preserve supplied dates and report conflicts rather than silently rescheduling them.
 
 ## Create and deliver
 

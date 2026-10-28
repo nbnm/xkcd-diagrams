@@ -12,15 +12,22 @@ public struct LibraryItem: Codable, Identifiable {
 }
 
 public enum Library {
+    private static let resourceBundle: Bundle = {
+        // SwiftPM's generated accessor looks beside the executable bundle. A
+        // macOS app stores its resource bundles inside Contents/Resources.
+        if let url = Bundle.main.resourceURL?.appendingPathComponent("XKCDDiagrams_DiagramCore.bundle"),
+           let bundle = Bundle(url: url) { return bundle }
+        return Bundle.module
+    }()
     public static let documentGroup = "Documents"
     public static let groups = ["T1A", "Databricks", "Azure", "AWS", "OpenAI", "Anthropic"]
     public static func items() -> [LibraryItem] {
-        guard let url = Bundle.module.url(forResource: "library", withExtension: "json", subdirectory: "Resources"),
+        guard let url = resourceBundle.url(forResource: "library", withExtension: "json", subdirectory: "Resources"),
               let data = try? Data(contentsOf: url), let items = try? JSONDecoder().decode([LibraryItem].self, from: data) else { return [] }
         return items
     }
     public static func schema() throws -> Data {
-        guard let url = Bundle.module.url(forResource: "diagram.schema", withExtension: "json", subdirectory: "Resources") else { throw DiagramError.message("Schema resource is missing.") }
+        guard let url = resourceBundle.url(forResource: "diagram.schema", withExtension: "json", subdirectory: "Resources") else { throw DiagramError.message("Schema resource is missing.") }
         return try Data(contentsOf: url)
     }
     public static func sample() -> Diagram {

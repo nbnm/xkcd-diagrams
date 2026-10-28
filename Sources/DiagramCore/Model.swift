@@ -239,14 +239,21 @@ public struct Diagram: Codable, Equatable {
     public var containers: [String: Container]
     public var connectors: [String: Connector]
     public var assets: [String: Asset]
+    public var mode: DocumentMode
+    public var drawing: FreeDrawing?
+    public var timeline: Timeline?
     public init(id: String = UUID().uuidString.lowercased(), title: String = "Untitled diagram",
                 theme: Theme = .init(), watermark: Bool = false, root: String = "canvas", nodes: [String: Node] = [:],
-                containers: [String: Container]? = nil, connectors: [String: Connector] = [:], assets: [String: Asset] = [:]) {
+                containers: [String: Container]? = nil, connectors: [String: Connector] = [:], assets: [String: Asset] = [:],
+                mode: DocumentMode = .diagram, drawing: FreeDrawing? = nil, timeline: Timeline? = nil) {
         schemaVersion = 1; self.id = id; self.title = title; self.theme = theme; self.watermark = watermark; self.root = root
         self.nodes = nodes; self.containers = containers ?? [root: Container(layout: .init(mode: .free))]
         self.connectors = connectors; self.assets = assets
+        self.mode = mode
+        self.drawing = drawing ?? (mode == .drawing ? FreeDrawing() : nil)
+        self.timeline = timeline ?? (mode == .timeline ? Timeline() : nil)
     }
-    enum CodingKeys: String, CodingKey { case schemaVersion, id, title, theme, watermark, root, nodes, containers, connectors, assets }
+    enum CodingKeys: String, CodingKey { case schemaVersion, id, title, theme, watermark, root, nodes, containers, connectors, assets, mode, drawing, timeline }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
@@ -258,6 +265,9 @@ public struct Diagram: Codable, Equatable {
         containers = try c.decode([String: Container].self, forKey: .containers)
         connectors = try c.decodeIfPresent([String: Connector].self, forKey: .connectors) ?? [:]
         assets = try c.decodeIfPresent([String: Asset].self, forKey: .assets) ?? [:]
+        mode = try c.decodeIfPresent(DocumentMode.self, forKey: .mode) ?? .diagram
+        drawing = try c.decodeIfPresent(FreeDrawing.self, forKey: .drawing)
+        timeline = try c.decodeIfPresent(Timeline.self, forKey: .timeline)
     }
     public func encoded() throws -> Data {
         let e = JSONEncoder(); e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -286,7 +296,7 @@ public struct Diagram: Codable, Equatable {
     public func parent(of id: String) -> String? {
         containers.keys.sorted().first { containers[$0]!.children.contains(id) }
     }
-    public func label(of id: String) -> String { nodes[id]?.label ?? containers[id]?.label ?? connectors[id]?.label ?? id }
+    public func label(of id: String) -> String { nodes[id]?.label ?? containers[id]?.label ?? connectors[id]?.label ?? timeline?.tasks.first { $0.id == id }?.label ?? (drawing?.strokes.contains { $0.id == id } == true ? "Pen stroke" : id) }
     public func strokeWidthOverride(for id: String) -> Double? { nodes[id]?.strokeWidth ?? containers[id]?.strokeWidth ?? connectors[id]?.strokeWidth }
     public func strokeWidth(for id: String) -> Double { strokeWidthOverride(for: id) ?? theme.strokeWidth }
     public func fontSizeOverride(for id: String) -> Double? { nodes[id]?.fontSize ?? containers[id]?.fontSize ?? connectors[id]?.fontSize }
@@ -304,6 +314,11 @@ public struct Diagram: Codable, Equatable {
     }
     public mutating func remove(_ id: String) {
         guard id != root else { return }
+        drawing?.strokes.removeAll { $0.id == id }
+        timeline?.tasks.removeAll { $0.id == id }
+        if timeline != nil {
+            for index in timeline!.tasks.indices { timeline!.tasks[index].dependencies.removeAll { $0 == id } }
+        }
         if connectors.removeValue(forKey: id) != nil { return }
         let removed = descendants(of: id)
         for key in removed { nodes.removeValue(forKey: key); containers.removeValue(forKey: key) }

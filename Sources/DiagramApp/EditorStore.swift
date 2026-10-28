@@ -27,9 +27,12 @@ struct CanvasViewport: Equatable {
     @Published var zoomScale: Double = 1
     @Published var status = "Ready"
     @Published var historyVersion = 0
+    @Published var drawingTool: FreeDrawingTool = .pen
     let library: [DiagramCore.LibraryItem] = Library.items()
     var canvasViewport: CanvasViewport?
     var canSaveTo: ((URL) -> Bool)?
+    var finishTextEditing: (() -> Void)?
+    var pasteboard: NSPasteboard = .general
     private var revision: String?
     private var past: [Diagram] = [], future: [Diagram] = []
     private var lastAction = "", lastChange = Date.distantPast
@@ -48,12 +51,13 @@ struct CanvasViewport: Equatable {
     var canZoomOut: Bool { zoomScale > 0.2 + 0.0001 }
     func zoomIn() { zoomRequest += 1 }
     func zoomOut() { zoomRequest -= 1 }
-    var selectionLabel: String { selection.map(document.label(of:)) ?? "Diagram" }
+    var selectionLabel: String { selection.map(document.label(of:)) ?? document.mode.title }
     func isConnectionEndpoint(_ id: String) -> Bool { id != document.root && (document.nodes[id] != nil || document.containers[id] != nil) }
     func toggleConnector() {
         if connecting { cancelConnection() } else { beginConnection() }
     }
     func beginConnection(from id: String? = nil) {
+        guard document.mode == .diagram else { return }
         guard id == nil || isConnectionEndpoint(id!) else { return }
         placingContainer = false
         placingItem = nil
@@ -65,10 +69,12 @@ struct CanvasViewport: Equatable {
         connecting = false; connectionStart = nil; status = "Ready"
     }
     func beginContainerPlacement() {
+        guard document.mode == .diagram else { return }
         cancelTools(); placingContainer = true
         status = "Click the canvas to place a container"
     }
     func activateTool(_ action: ToolboxAction) {
+        guard document.mode == .diagram else { return }
         switch action {
         case .container: beginContainerPlacement()
         case .connector: beginConnection()
@@ -99,10 +105,10 @@ struct CanvasViewport: Equatable {
         }
     }
     @discardableResult func copySelection() -> Bool {
+        if let result = copyModeSelection() { return result }
         guard let id = selection, id != document.root else { return false }
         do {
             let data = try DiagramClipboard.capture(id, from: document).encoded()
-            let pasteboard = NSPasteboard.general
             pasteboard.clearContents(); pasteboard.setData(data, forType: Self.itemPasteboardType)
             pasteboard.setString(String(decoding: data, as: UTF8.self), forType: .string)
             clipboardChange = pasteboard.changeCount; pasteCount = 0
@@ -110,7 +116,7 @@ struct CanvasViewport: Equatable {
         } catch { errorMessage = error.localizedDescription; return false }
     }
     func pasteSelection() {
-        let pasteboard = NSPasteboard.general
+        if pasteModeSelection() { return }
         guard let data = pasteboard.data(forType: Self.itemPasteboardType) else { status = "Copy a diagram item before pasting"; return }
         do {
             let clip = try DiagramClipboard.decode(data)
@@ -160,7 +166,8 @@ struct CanvasViewport: Equatable {
         past.append(document); install(next); historyVersion += 1; status = "Redo"; lastAction = ""; scheduleSave()
     }
     private func reconcileSelection(in d: Diagram) {
-        if let id = selection, d.nodes[id] == nil && d.containers[id] == nil && d.connectors[id] == nil { selection = nil }
+        if let id = selection, d.nodes[id] == nil && d.containers[id] == nil && d.connectors[id] == nil &&
+            d.drawing?.strokes.contains(where: { $0.id == id }) != true && d.timeline?.tasks.contains(where: { $0.id == id }) != true { selection = nil }
         if let id = connectionStart, d.nodes[id] == nil && d.containers[id] == nil { connectionStart = nil }
     }
     private func install(_ d: Diagram) { reconcileSelection(in: d); document = d; scene = try! Renderer.scene(d); dirty = true }
@@ -192,6 +199,7 @@ struct CanvasViewport: Equatable {
         if document.nodes[id] != nil { selection = id }
     }
     func addContainer(point: CGPoint? = nil, parent target: String? = nil) {
+        guard document.mode == .diagram else { return }
         cancelTools()
         let parent = target ?? selection.flatMap { document.containers[$0] != nil ? $0 : nil } ?? document.root
         let id = "group-" + UUID().uuidString.prefix(6).lowercased()
@@ -291,6 +299,7 @@ struct CanvasViewport: Equatable {
         mutate("Move element") { try DiagramEditing.reparent(id, into: target, position: position, index: index, document: &$0) }
     }
     func nudge(_ dx: Double, _ dy: Double) {
+        if nudgeModeSelection(dx, dy) { return }
         guard let id = selection, let parent = document.parent(of: id), document.containers[parent]?.layout.mode == .free else { return }
         guard let frame = scene.layout.frames[id] else { return }
         let position = scene.layout.position(at: CGPoint(x: frame.minX + dx, y: frame.minY + dy), in: parent, document: document)
@@ -309,11 +318,13 @@ struct CanvasViewport: Equatable {
     }
     private func reset(_ d: Diagram, url: URL?, revision: String?) {
         autosave?.cancel(); selection = nil; connectionStart = nil; connecting = false; placingContainer = false; placingItem = nil
+        drawingTool = .pen
         document = d; scene = try! Renderer.scene(d)
         self.url = url; self.revision = revision; dirty = false; externalChange = false
         past = []; future = []; historyVersion += 1; status = "Ready"; lastAction = ""
     }
     @discardableResult func save(asCopy: Bool = false) -> Bool {
+        finishTextEditing?()
         var destination = url
         if destination == nil || asCopy {
             let panel = NSSavePanel(); panel.allowedContentTypes = [.json]; panel.nameFieldStringValue = document.title + ".diagram.json"
@@ -330,6 +341,7 @@ struct CanvasViewport: Equatable {
         } catch { errorMessage = error.localizedDescription; return false }
     }
     func export(_ format: String) {
+        finishTextEditing?()
         let panel = NSSavePanel(); panel.allowedContentTypes = [format == "png" ? .png : .svg]
         panel.nameFieldStringValue = document.title + "." + format
         guard panel.runModal() == .OK, let destination = panel.url else { return }

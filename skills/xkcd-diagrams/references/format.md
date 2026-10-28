@@ -1,5 +1,7 @@
 # Diagram format
 
+The optional top-level `mode` defaults to `diagram`, preserving existing documents. `drawing` and `timeline` use the same themes, file operations, and exports with mode-specific content; see [drawing and timeline modes](modes.md). The containment rules below describe diagram mode.
+
 Schema 1 uses strict JSON. Query `diagram schema` for property types and bounds. IDs are keys of `nodes`, `containers`, and `connectors`; they are unique across those collections. Asset IDs occupy a separate namespace.
 
 ```json

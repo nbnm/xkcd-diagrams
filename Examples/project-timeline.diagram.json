@@ -1,0 +1,90 @@
+{
+  "assets" : {
+
+  },
+  "connectors" : {
+
+  },
+  "containers" : {
+    "canvas" : {
+      "children" : [
+
+      ],
+      "layout" : {
+        "gap" : 28,
+        "mode" : "free",
+        "padding" : 28
+      }
+    }
+  },
+  "id" : "09b5df77-3b07-488f-a068-52bc02d51689",
+  "mode" : "timeline",
+  "nodes" : {
+
+  },
+  "root" : "canvas",
+  "schemaVersion" : 1,
+  "theme" : {
+    "fontSize" : 16,
+    "preset" : "standard",
+    "seed" : 42,
+    "sketch" : true,
+    "strokeWidth" : 1.6,
+    "version" : 1
+  },
+  "timeline" : {
+    "scale" : "weeks",
+    "tasks" : [
+      {
+        "dependencies" : [
+
+        ],
+        "duration" : 5,
+        "id" : "discovery",
+        "label" : "Discovery & design",
+        "milestone" : false,
+        "owner" : "Architecture",
+        "progress" : 0.6,
+        "start" : "2026-10-26"
+      },
+      {
+        "dependencies" : [
+          "discovery"
+        ],
+        "duration" : 10,
+        "id" : "build",
+        "label" : "Build & integration",
+        "milestone" : false,
+        "owner" : "Engineering",
+        "progress" : 0.2,
+        "start" : "2026-10-31"
+      },
+      {
+        "dependencies" : [
+          "build"
+        ],
+        "duration" : 5,
+        "id" : "test",
+        "label" : "Validation",
+        "milestone" : false,
+        "owner" : "Delivery",
+        "progress" : 0,
+        "start" : "2026-11-10"
+      },
+      {
+        "dependencies" : [
+          "test"
+        ],
+        "duration" : 0,
+        "id" : "launch",
+        "label" : "Go live",
+        "milestone" : true,
+        "owner" : "",
+        "progress" : 0,
+        "start" : "2026-11-15"
+      }
+    ]
+  },
+  "title" : "Project timeline",
+  "watermark" : false
+}

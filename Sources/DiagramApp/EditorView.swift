@@ -18,9 +18,18 @@ struct EditorView: View {
                 Divider()
             }
             HSplitView {
-                library.frame(minWidth: 210, idealWidth: 230, maxWidth: 300)
-                DiagramCanvas(store: store).frame(minWidth: 520, maxWidth: .infinity, maxHeight: .infinity)
-                Inspector(store: store).frame(minWidth: 240, idealWidth: 260, maxWidth: 320)
+                Group {
+                    if store.document.mode == .diagram { library }
+                    else { ModeToolbox(store: store, appAppearance: $appAppearance) }
+                }.frame(minWidth: 210, idealWidth: 230, maxWidth: 300)
+                Group {
+                    if store.document.mode == .diagram { DiagramCanvas(store: store) }
+                    else { ModeCanvas(store: store) }
+                }.frame(minWidth: 520, maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if store.document.mode == .diagram { Inspector(store: store) }
+                    else { ModeInspector(store: store) }
+                }.frame(minWidth: 240, idealWidth: 260, maxWidth: 320)
             }
             Divider()
             HStack(spacing: 12) {
@@ -36,12 +45,12 @@ struct EditorView: View {
                         .accessibilityLabel("File path").accessibilityValue(url.path)
                         .help("Open this diagram's folder in Finder")
                 } else {
-                    Text("Unsaved diagram").frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Unsaved \(store.document.mode == .drawing ? "drawing" : store.document.mode.rawValue)").frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Text("\(store.document.nodes.count) systems · \(store.document.containers.count - 1) boundaries")
+                Text(store.contentSummary)
                     .fixedSize()
                 Divider().frame(height: 12)
-                Text(store.placingContainer || store.placingItem != nil ? "Click to place · Esc to cancel" : store.connecting ? (store.connectionStart == nil ? "Select the source" : "Select the destination") : "⌥ drag to pan · pinch to zoom")
+                Text(store.modeHint)
                     .fixedSize()
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 30)
         }

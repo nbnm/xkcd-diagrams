@@ -143,6 +143,12 @@ func temporaryDirectory() throws -> URL {
 @main struct DiagramAppChecks {
     @MainActor static func main() async {
         let checks: [(String, @MainActor () async throws -> Void)] = [
+            ("modesKeepDocumentsSeparateAndNewTabsInheritMode", { try modesKeepDocumentsSeparateAndNewTabsInheritMode() }),
+            ("freeDrawingMouseGesturesAreAtomicAndEditable", { try freeDrawingMouseGesturesAreAtomicAndEditable() }),
+            ("inlineTextCommitsOnceAndCancelsWithoutCreatingItems", { try inlineTextCommitsOnceAndCancelsWithoutCreatingItems() }),
+            ("timelineMouseMoveResizeAndReorderKeepDatesConsistent", { try timelineMouseMoveResizeAndReorderKeepDatesConsistent() }),
+            ("modeClipboardUsesFreshIDsAndPreservesOtherItems", { try modeClipboardUsesFreshIDsAndPreservesOtherItems() }),
+            ("modeFilesRestoreAndSwitchingCommitsPendingText", { try modeFilesRestoreAndSwitchingCommitsPendingText() }),
             ("tabsKeepEditingHistorySelectionAndViewportSeparate", { try tabsKeepEditingHistorySelectionAndViewportSeparate() }),
             ("openingFilesPreservesUnsavedTabsAndDeduplicatesPaths", { try openingFilesPreservesUnsavedTabsAndDeduplicatesPaths() }),
             ("closingTabsHonorsCancelAndKeepsAValidActiveEditor", { try closingTabsHonorsCancelAndKeepsAValidActiveEditor() }),

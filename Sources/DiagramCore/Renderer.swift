@@ -55,6 +55,7 @@ public struct RenderScene {
 
 public enum Renderer {
     public static func scene(_ document: Diagram) throws -> RenderScene {
+        if document.mode == .timeline { return try TimelineRenderer.scene(document) }
         let layout = try LayoutEngine.layout(document)
         var drawings: [Drawing] = []
         let sketch = document.theme.sketch, palette = RenderPalette(document.theme.preset)
@@ -149,7 +150,7 @@ public enum Renderer {
                 }
                 if node.shape != .cylinder && !node.shape.isDocument { labelRect.origin.y += 43; labelRect.size.height -= 43 }
             } else if node.shape == .actor { labelRect = UserContent.labelRect(in: r) }
-            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id), fitInk: node.shape == .actor), fill: 0.12))
+            drawings.append(Drawing(Typography.paths(node.label, in: labelRect, font: Typography.font(document, for: id), centered: document.mode != .drawing, fitInk: node.shape == .actor), fill: 0.12))
         }
         for id in layout.order where id != document.root && document.containers[id] != nil {
             let r = layout.frames[id]!, label = document.containers[id]!.label ?? "Container"
@@ -163,6 +164,10 @@ public enum Renderer {
                 drawings.append(Drawing(CGPath(rect: rect, transform: nil), fill: 1))
                 drawings.append(Drawing(Typography.paths(label, in: rect.insetBy(dx: 5, dy: 2), font: Typography.font(document, for: id)), fill: 0.32))
             }
+        }
+        if let drawing = document.drawing {
+            // Freehand strokes use their own smoothing, never synthetic sketch wobble.
+            drawings.insert(contentsOf: drawing.strokes.map { Drawing(FreehandGeometry.path($0), stroke: 0.14, width: CGFloat($0.strokeWidth), strokeRole: .outline) }, at: 0)
         }
         // Include actual stroked geometry and glyph extents to avoid export clipping.
         var result = layout

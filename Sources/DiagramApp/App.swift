@@ -23,7 +23,9 @@ enum AppAppearance: String, CaseIterable {
         .defaultSize(width: 1380, height: 840)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("New Diagram", action: workspace.newTab).keyboardShortcut("n")
+                Button("New Diagram") { workspace.newTab(mode: .diagram) }.keyboardShortcut("n")
+                Button("New Free Drawing") { workspace.newTab(mode: .drawing) }
+                Button("New Timeline") { workspace.newTab(mode: .timeline) }
                 Button("New Tab", action: workspace.newTab).keyboardShortcut("t")
                 Button("Open…", action: workspace.open).keyboardShortcut("o")
                 Button("Open Example", action: workspace.openExample)
@@ -38,8 +40,8 @@ enum AppAppearance: String, CaseIterable {
                 Button("Export PNG…", action: { store.export("png") })
             }
             CommandGroup(replacing: .undoRedo) {
-                Button("Undo", action: store.undo).keyboardShortcut("z").disabled(!store.canUndo)
-                Button("Redo", action: store.redo).keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!store.canRedo)
+                Button("Undo", action: store.undoEditing).keyboardShortcut("z").disabled(!store.canUndoEditing)
+                Button("Redo", action: store.redoEditing).keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!store.canRedoEditing)
             }
             CommandGroup(replacing: .pasteboard) {
                 Button("Cut") { store.clipboardCommand("cut") }.keyboardShortcut("x")
@@ -47,6 +49,12 @@ enum AppAppearance: String, CaseIterable {
                 Button("Paste") { store.clipboardCommand("paste") }.keyboardShortcut("v")
             }
             CommandMenu("Toolbox") {
+                if store.document.mode == .drawing {
+                    ForEach(FreeDrawingTool.allCases, id: \.self) { tool in Button("\(tool.title) (\(tool.key))") { store.chooseDrawingTool(tool) } }
+                } else if store.document.mode == .timeline {
+                    Button("Task (N)") { store.addTask() }
+                    Button("Milestone (M)") { store.addTask(milestone: true) }
+                } else {
                 ForEach(Array(ToolboxShortcuts.all.filter { $0.keys.count == 1 }.enumerated()), id: \.offset) { _, tool in
                     Button("\(tool.title) (\(tool.displayKeys))") { store.activateTool(tool.action) }
                 }
@@ -57,6 +65,7 @@ enum AppAppearance: String, CaseIterable {
                         }
                     }
                 }
+                }
             }
             CommandGroup(before: .windowList) {
                 Button("Next Tab") { workspace.switchTab(by: 1) }.keyboardShortcut("]", modifiers: [.command, .shift]).disabled(!workspace.canSwitchTabs)
@@ -64,6 +73,16 @@ enum AppAppearance: String, CaseIterable {
                 Divider()
             }
             CommandMenu("Diagram") {
+                if store.document.mode == .drawing {
+                    ForEach(FreeDrawingTool.allCases, id: \.self) { tool in Button("\(tool.title) (\(tool.key))") { store.chooseDrawingTool(tool) } }
+                    Divider()
+                }
+                if store.document.mode == .timeline {
+                    Button("Add Task") { store.addTask() }
+                    Button("Add Milestone") { store.addTask(milestone: true) }
+                    Divider()
+                }
+                if store.document.mode == .diagram {
                 Button("Add Container") { store.addContainer() }.keyboardShortcut("g", modifiers: [.command, .shift])
                 Button("Add Container Below Diagram", action: store.addContainerBelow)
                 Picker("Canvas Placement", selection: Binding(get: { store.document.containers[store.document.root]?.layout.mode ?? .free }, set: store.setCanvasLayout)) {
@@ -73,6 +92,7 @@ enum AppAppearance: String, CaseIterable {
                     Text("Custom rows and columns").tag(LayoutMode.grid)
                 }
                 Button("Connector", action: store.toggleConnector).keyboardShortcut("k")
+                }
                 Button("Zoom In", action: store.zoomIn).keyboardShortcut("=").disabled(!store.canZoomIn)
                 Button("Zoom Out", action: store.zoomOut).keyboardShortcut("-").disabled(!store.canZoomOut)
                 Button("Fit to Content") { store.fitRequest += 1 }.keyboardShortcut("0")

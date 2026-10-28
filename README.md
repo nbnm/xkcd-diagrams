@@ -6,6 +6,8 @@ A native macOS app for enterprise and IT architecture diagrams, built around T1A
 
 ## Features
 
+- Three document modes: system diagrams, free mouse drawing with smoothed strokes and text, and Gantt-style timelines.
+
 - Containers with horizontal, vertical, free, and custom grid layouts, including spanning rows and columns.
 - A borderless canvas, orthogonal connectors, zoom and pan, and tabs with separate editing histories.
 - Five diagram color themes: Standard, Blueprint, Dark, SecondStack, and 8FDE. Each supports an independent Sketch toggle.
@@ -45,6 +47,8 @@ open "$HOME/Applications/XKCD Diagrams.app"
 ```
 
 The build produces `dist/XKCD Diagrams.app`, `dist/diagram`, and its resource bundle. It targets the local machine's architecture. The app is locally signed for development; it is not a notarized distribution build.
+
+The installed app includes its logo library and schema and runs independently of the checkout and build cache. You can also copy it to `/Applications` to install it for all users.
 
 For development, run the app directly from `dist/` after building. `./scripts/build-app.sh debug` creates a debug build.
 
@@ -113,6 +117,22 @@ Container and Connector live in the toolbox. The top toolbar controls diagram co
 
 See the [editor guide](docs/EDITOR.md) for layouts, grid spans, connectors, all platform shortcuts, tabs, themes, and file behavior.
 
+## Free Drawing and Timeline modes
+
+Use the **Mode** control at the top left to switch between Diagram, Free Drawing, and Timeline. Switching selects an existing tab of that type or opens a new one, preserving current work. File → New Free Drawing / New Timeline creates another document; **⌘T** creates a new tab in the current mode.
+
+**Free Drawing** has Pen (**P**), Select (**V**), Text (**T**), and Eraser (**E**). Draw with the mouse; smoothing removes jitter while retaining the original points. Pen width and smoothness defaults live in the sidebar. Select a stroke to adjust only that stroke or drag it to move it. Eraser removes whole strokes or text items, with one undo step per gesture. Choose Text and click anywhere to type; **⌘Return** commits and **Escape** cancels. Double-click existing text to edit it. Copy/paste and undo/redo work for strokes and text.
+
+**Timeline** has tasks (**N**) and milestones (**M**), day/week/month scales, owners, completion percentages, and predecessor links. Drag the middle of a bar to move its dates, drag either end to resize it, or drag its task-name row vertically to reorder. Edit exact dates and duration in the inspector. Dates use calendar days, including weekends; finish dates are inclusive. Predecessors are visual finish-to-start links. Scheduling is manual, and the inspector flags a task that starts before a predecessor finishes. Dependency cycles are rejected. This mode does not import Microsoft Project files or provide critical-path/resource planning.
+
+All modes share tabs, themes, zoom/pan, editable JSON, save/autosave, and PNG/SVG export. Old files open as diagrams. Agents can initialize either new mode:
+
+```sh
+mkdir -p diagrams
+dist/diagram init diagrams/sketch.diagram.json --mode drawing --example
+dist/diagram init diagrams/project.diagram.json --mode timeline --example
+```
+
 ## Diagram styles
 
 Blueprint uses blue drafting paper, a thin grid, and white ink. This screenshot has Sketch turned off:
@@ -155,7 +175,7 @@ The [skill's format guide](skills/xkcd-diagrams/references/format.md) documents 
 ./scripts/check-app.sh
 ```
 
-The core suite contains 69 checks covering document validation, layout, routing, themes, exports, clipboard behavior, and symbols. Eight app checks exercise the editor/workspace stores, tab independence, file deduplication, close protection, restoration, external edits, and autosave cancellation. The checks use standalone Swift executables and work with Command Line Tools installations.
+The core suite contains 77 checks covering document validation, layout, routing, themes, exports, clipboard behavior, and symbols. Fourteen app checks exercise the editor/workspace stores, tab independence, file deduplication, close protection, restoration, external edits, autosave cancellation, native drawing/text/eraser gestures, Gantt drag/resize/reorder, mode switching, and clipboard behavior. The checks use standalone Swift executables and work with Command Line Tools installations.
 
 | Source | Purpose |
 | --- | --- |

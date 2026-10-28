@@ -1587,6 +1587,14 @@ func expectThrows(_ body: () throws -> Void, line: UInt = #line) throws {
 }
 
 let checks: [(String, () throws -> Void)] = [
+    ("timelineDependenciesApproachTheStartFromOutsideTheBar", timelineDependenciesApproachTheStartFromOutsideTheBar),
+    ("oversizedModeFilesCannotOverwriteReadableDocuments", oversizedModeFilesCannotOverwriteReadableDocuments),
+    ("documentModesPreserveLegacyAndStrictRoundTrips", documentModesPreserveLegacyAndStrictRoundTrips),
+    ("freehandSmoothingPreservesEndpointsAndRemovesJitter", freehandSmoothingPreservesEndpointsAndRemovesJitter),
+    ("freeDrawingBoundsTextAndValidationStayPortable", freeDrawingBoundsTextAndValidationStayPortable),
+    ("timelineCalendarMathHandlesLeapYearsAndDST", timelineCalendarMathHandlesLeapYearsAndDST),
+    ("timelineValidationRejectsCyclesAndInvalidSchedules", timelineValidationRejectsCyclesAndInvalidSchedules),
+    ("timelineGeometryEditingAndExportsAgreeAcrossStyles", timelineGeometryEditingAndExportsAgreeAcrossStyles),
     ("toolboxShortcutsCoverEveryPresetWithoutConflicts", toolboxShortcutsCoverEveryPresetWithoutConflicts),
     ("clipboardDuplicatesNestedContainersAndInternalConnections", clipboardDuplicatesNestedContainersAndInternalConnections),
     ("clipboardPreservesAssetsAcrossFilesAndRejectsInvalidTargets", clipboardPreservesAssetsAcrossFilesAndRejectsInvalidTargets),

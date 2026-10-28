@@ -46,6 +46,21 @@
       "additionalProperties": {
         "$ref": "#/$defs/asset"
       }
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "diagram",
+        "drawing",
+        "timeline"
+      ],
+      "default": "diagram"
+    },
+    "drawing": {
+      "$ref": "#/$defs/drawing"
+    },
+    "timeline": {
+      "$ref": "#/$defs/timeline"
     }
   },
   "required": [
@@ -437,6 +452,256 @@
       "type": "number",
       "minimum": 10,
       "maximum": 36
+    },
+    "inkStroke": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20000,
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "smoothing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "id",
+        "points",
+        "strokeWidth",
+        "smoothing"
+      ],
+      "additionalProperties": false
+    },
+    "drawing": {
+      "type": "object",
+      "properties": {
+        "strokes": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/inkStroke"
+          }
+        },
+        "smoothing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        }
+      },
+      "required": [
+        "strokes",
+        "smoothing",
+        "strokeWidth"
+      ],
+      "additionalProperties": false
+    },
+    "timelineTask": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "format": "date"
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3650
+        },
+        "progress": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "owner": {
+          "type": "string"
+        },
+        "milestone": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "start",
+        "duration",
+        "progress",
+        "owner",
+        "milestone",
+        "dependencies"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "milestone": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "duration": {
+                "const": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "duration": {
+                "minimum": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "timeline": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/timelineTask"
+          }
+        },
+        "scale": {
+          "type": "string",
+          "enum": [
+            "days",
+            "weeks",
+            "months"
+          ]
+        }
+      },
+      "required": [
+        "tasks",
+        "scale"
+      ],
+      "additionalProperties": false
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "drawing"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "drawing"
+        ],
+        "properties": {
+          "timeline": false,
+          "nodes": {
+            "additionalProperties": {
+              "properties": {
+                "shape": {
+                  "const": "text"
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "drawing": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "timeline"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "timeline"
+        ],
+        "properties": {
+          "nodes": {
+            "maxProperties": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "timeline": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "enum": [
+              "drawing",
+              "timeline"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "containers": {
+            "maxProperties": 1
+          },
+          "connectors": {
+            "maxProperties": 0
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import DiagramCore
 
 struct WorkspaceView: View {
     @ObservedObject var workspace: WorkspaceStore
@@ -14,6 +15,14 @@ struct WorkspaceView: View {
         }
         .background(WorkspaceWindowGuard(workspace: workspace).frame(width: 0, height: 0))
         .onReceive(poll) { _ in workspace.checkExternalChanges() }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Picker("Mode", selection: Binding(get: { workspace.activeStore.document.mode }, set: workspace.openMode)) {
+                    ForEach(DocumentMode.allCases, id: \.self) { mode in Label(mode.title, systemImage: mode.symbol).tag(mode) }
+                }.pickerStyle(.menu).frame(width: 158).accessibilityLabel("Mode")
+                    .help("Switch to a mode's existing tab, or create a new one; current work stays in its tab")
+            }
+        }
     }
 
     private var tabBar: some View {
@@ -26,6 +35,7 @@ struct WorkspaceView: View {
                             HStack(spacing: 6) {
                                 Button { workspace.select(tab.id) } label: {
                                     HStack(spacing: 7) {
+                                        Image(systemName: tab.document.mode.symbol).foregroundStyle(.secondary)
                                         if tab.dirty {
                                             Circle().fill(Color.secondary).frame(width: 6, height: 6)
                                                 .accessibilityLabel("Unsaved changes")
@@ -58,7 +68,7 @@ struct WorkspaceView: View {
             Button(action: workspace.newTab) {
                 Image(systemName: "plus").font(.system(size: 12, weight: .medium))
                     .frame(width: 38, height: 38).contentShape(Rectangle())
-            }.buttonStyle(.plain).help("New diagram tab (⌘T)").accessibilityLabel("New diagram tab")
+            }.buttonStyle(.plain).help("New \(workspace.activeStore.document.mode.title) tab (⌘T)").accessibilityLabel("New \(workspace.activeStore.document.mode.title) tab")
         }.background(Color(nsColor: .windowBackgroundColor))
     }
 }

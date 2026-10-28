@@ -36,6 +36,8 @@ public enum DiagramFiles {
             guard exists else { throw DiagramError.message("The file was removed outside this editor. Save a copy before writing.") }
             guard revision(try Data(contentsOf: url)) == expectedRevision else { throw DiagramError.message("The file changed outside this editor. Reload or save a copy before writing.") }
         } else if exists && !overwrite { throw DiagramError.message("File already exists. Supply its expected SHA-256 revision or explicitly allow overwrite.") }
-        let data = try document.encoded(); try writeData(data, to: url); return revision(data)
+        let data = try document.encoded()
+        guard data.count <= 16 * 1024 * 1024 else { throw DiagramError.message("Document exceeds the 16 MB file limit. Reduce its content before saving.") }
+        try writeData(data, to: url); return revision(data)
     }
 }

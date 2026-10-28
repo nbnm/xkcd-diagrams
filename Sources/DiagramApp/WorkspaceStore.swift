@@ -44,11 +44,19 @@ import DiagramCore
 
     func select(_ id: UUID) {
         guard id != selectedTabID, tabs.contains(where: { $0.id == id }) else { return }
+        activeStore.finishTextEditing?()
         activeStore.cancelTools(); selectedTabID = id; closeApproved = false; persistSession()
     }
-    func newTab() { activeStore.cancelTools(); append(EditorStore(document: Diagram())); persistSession() }
-    func openExample() { activeStore.cancelTools(); append(EditorStore()); persistSession() }
+    func newTab() { newTab(mode: activeStore.document.mode) }
+    func newTab(mode: DocumentMode) { activeStore.finishTextEditing?(); activeStore.cancelTools(); append(EditorStore(document: mode.blank())); persistSession() }
+    func openMode(_ mode: DocumentMode) {
+        guard activeStore.document.mode != mode else { return }
+        if let existing = tabs.last(where: { $0.document.mode == mode }) { select(existing.id) }
+        else { newTab(mode: mode) }
+    }
+    func openExample() { activeStore.finishTextEditing?(); activeStore.cancelTools(); append(EditorStore()); persistSession() }
     func open() {
+        activeStore.finishTextEditing?()
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]
         panel.canChooseDirectories = false; panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
@@ -59,6 +67,7 @@ import DiagramCore
         if let existing = tabs.first(where: { $0.url.map(Self.fileURL) == url }) { select(existing.id); return }
         do {
             let (document, revision) = try DiagramFiles.read(url)
+            activeStore.finishTextEditing?()
             activeStore.cancelTools(); append(EditorStore(document: document, url: url, revision: revision)); persistSession()
         } catch { activeStore.errorMessage = error.localizedDescription }
     }
@@ -71,6 +80,7 @@ import DiagramCore
     func closeTab(_ id: UUID) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         let store = tabs[index]
+        store.finishTextEditing?()
         guard !store.dirty || confirmClose(store) else { return }
         store.stopAutosave(); observations.removeValue(forKey: id)
         tabs.remove(at: index)
@@ -80,6 +90,7 @@ import DiagramCore
     }
     func checkExternalChanges() { for tab in tabs { tab.checkExternalChanges() } }
     func confirmCloseAll() -> Bool {
+        for tab in tabs { tab.finishTextEditing?() }
         if closeApproved { return true }
         let ordered = [activeStore] + tabs.filter { $0.id != selectedTabID }
         for tab in ordered where tab.dirty {

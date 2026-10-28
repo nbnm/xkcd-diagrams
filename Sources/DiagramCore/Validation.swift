@@ -18,7 +18,20 @@ enum StrictDocument {
                 diagnostics.append(.init("unknown-field", "\(path).\(key)", "Unknown field. Check the published schema."))
             }
         }
-        keys(root, ["schemaVersion", "id", "title", "theme", "watermark", "root", "nodes", "containers", "connectors", "assets"], "$")
+        keys(root, ["schemaVersion", "id", "title", "theme", "watermark", "root", "nodes", "containers", "connectors", "assets", "mode", "drawing", "timeline"], "$")
+        if let drawing = root["drawing"] as? [String: Any] {
+            keys(drawing, ["strokes", "smoothing", "strokeWidth"], "$.drawing")
+            for (i, stroke) in (drawing["strokes"] as? [[String: Any]] ?? []).enumerated() {
+                keys(stroke, ["id", "points", "strokeWidth", "smoothing"], "$.drawing.strokes[\(i)]")
+                for (j, point) in (stroke["points"] as? [[String: Any]] ?? []).enumerated() { keys(point, ["x", "y"], "$.drawing.strokes[\(i)].points[\(j)]") }
+            }
+        }
+        if let timeline = root["timeline"] as? [String: Any] {
+            keys(timeline, ["tasks", "scale"], "$.timeline")
+            for (i, task) in (timeline["tasks"] as? [[String: Any]] ?? []).enumerated() {
+                keys(task, ["id", "label", "start", "duration", "progress", "owner", "milestone", "dependencies"], "$.timeline.tasks[\(i)]")
+            }
+        }
         if let theme = root["theme"] as? [String: Any] { keys(theme, ["preset", "sketch", "version", "seed", "strokeWidth", "fontFamily", "fontSize"], "$.theme") }
         for collection in ["nodes", "containers", "connectors", "assets"] {
             guard let entries = root[collection] as? [String: Any] else { continue }
@@ -147,7 +160,7 @@ public enum Validator {
             for path in a.paths { do { _ = try SVGPath.parse(path) } catch { report("invalid-asset", p + ".paths", error.localizedDescription, id); break } }
         }
         if d.nodes.count + d.containers.count > 2000 { report("size-limit", "$", "This prototype supports up to 2000 elements.") }
-        return issues
+        return issues + DocumentModeValidation.validate(d)
     }
     private static func valid(_ p: Point) -> Bool { p.x.isFinite && p.y.isFinite && abs(p.x) <= 100000 && abs(p.y) <= 100000 }
 }
